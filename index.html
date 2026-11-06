@@ -347,12 +347,12 @@ footer{grid-column:2;color:var(--faint);font-size:13px;margin-top:-28px;display:
           <div class="shot"><span class="ph">T</span></div>
           <div class="meta"><span>Started Nov 2026</span><span class="go">Coming soon</span></div>
         </div>
-        <div class="card">
+        <a class="card" href="https://github.com/shouviksarkar14/echofind" target="_blank" rel="noopener">
           <div class="top"><span class="ico" style="background:#7c3aed">E</span><span class="name">EchoFind</span><span class="chip" style="--dot:var(--s-build)"><i></i>Building</span></div>
           <p class="pitch">Hum a tune and say a clue in the same recording, and it finds the melody. Matching runs locally with open-source signal processing and no paid APIs.</p>
           <div class="shot"><span class="ph">E</span></div>
-          <div class="meta"><span>Started Oct 2026</span><span class="go">Not public yet</span></div>
-        </div>
+          <div class="meta"><span>Started Oct 2026</span><span class="go">Code on GitHub ↗</span></div>
+        </a>
       </div>
     </section>
 
@@ -406,6 +406,7 @@ footer{grid-column:2;color:var(--faint);font-size:13px;margin-top:-28px;display:
     var rv=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");rv.unobserve(e.target)}})},{threshold:.08});
     document.querySelectorAll(".rv").forEach(function(el){rv.observe(el)});
   }else document.querySelectorAll(".rv").forEach(function(el){el.classList.add("in")});
+  setTimeout(function(){document.querySelectorAll(".rv").forEach(function(el){el.classList.add("in")})},1200);
 })();
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
