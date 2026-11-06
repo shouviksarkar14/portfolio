@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IIMK Course Planner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f7f5;--bg3:#f0efeb;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#a0a0a0;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);--border3:rgba(0,0,0,0.28);
+  --radius:8px;--radius-lg:12px;
+  --t4-bg:#EAF3DE;--t4-text:#3B6D11;
+  --t5-bg:#E6F1FB;--t5-text:#185FA5;
+  --t6-bg:#FAEEDA;--t6-text:#854F0B;
+  --nitya-bg:#EEEDFE;--nitya-text:#3C3489;
+  --clash-bg:#FCEBEB;--clash-text:#A32D2D;--clash-border:#E24B4A;
+  --ok:#1D9E75;--warn:#EF9F27;--over:#E24B4A;
+  --accent:#185FA5;--accent-bg:#E6F1FB;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+.app{display:grid;grid-template-columns:300px 1fr;height:100vh;overflow:hidden}
+.sidebar{background:var(--bg);border-right:0.5px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:14px 14px 10px;border-bottom:0.5px solid var(--border);flex-shrink:0}
+.sidebar-header h1{font-size:15px;font-weight:600;color:var(--text)}
+.sidebar-header p{font-size:11px;color:var(--text3);margin-top:2px}
+.search-wrap{padding:10px 12px;border-bottom:0.5px solid var(--border);flex-shrink:0}
+.search-wrap input{width:100%;padding:6px 10px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);outline:none}
+.search-wrap input:focus{border-color:var(--accent)}
+.filter-wrap{padding:8px 12px;border-bottom:0.5px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.pill{padding:3px 9px;font-size:11px;border-radius:20px;border:0.5px solid var(--border2);background:transparent;cursor:pointer;color:var(--text2);font-family:inherit;transition:all .12s}
+.pill:hover{background:var(--bg2)}
+.pill.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.course-list{flex:1;overflow-y:auto;padding:6px 8px}
+.course-card{padding:8px 10px;border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:5px;cursor:pointer;background:var(--bg);transition:border-color .12s,background .12s;user-select:none}
+.course-card:hover{border-color:var(--border2);background:var(--bg2)}
+.course-card.selected{border-color:var(--accent);background:var(--accent-bg)}
+.course-card.clashing{border-color:var(--clash-border);background:var(--clash-bg)}
+.course-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.course-code{font-size:12px;font-weight:600;color:var(--text)}
+.course-meta{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.tag{font-size:10px;padding:2px 5px;border-radius:10px;font-weight:500}
+.tag-t4{background:var(--t4-bg);color:var(--t4-text)}
+.tag-t5{background:var(--t5-bg);color:var(--t5-text)}
+.tag-t6{background:var(--t6-bg);color:var(--t6-text)}
+.tag-nitya{background:var(--nitya-bg);color:var(--nitya-text)}
+.course-prof{font-size:10px;color:var(--text2);margin-top:2px}
+.course-slots{font-size:9px;color:var(--text3);margin-top:2px}
+.empty{padding:20px;text-align:center;color:var(--text3);font-size:12px}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.clash-banner{padding:6px 16px;background:var(--clash-bg);border-bottom:0.5px solid #F7C1C1;font-size:11px;color:var(--clash-text);flex-shrink:0;display:none}
+.credits-bar{padding:10px 16px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;gap:18px;flex-shrink:0}
+.credit-term{flex:1}
+.credit-label{font-size:10px;color:var(--text2);margin-bottom:3px}
+.credit-label b{color:var(--text)}
+.credit-track{height:5px;background:var(--bg3);border-radius:3px}
+.credit-fill{height:5px;border-radius:3px;transition:width .3s}
+.credit-ok{background:var(--ok)}.credit-low{background:var(--warn)}.credit-over{background:var(--over)}
+.versions-bar{padding:7px 16px;background:var(--bg2);border-bottom:0.5px solid var(--border);display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap;min-height:36px}
+.versions-label{font-size:11px;color:var(--text3);flex-shrink:0}
+.ver-chip{padding:3px 10px;font-size:11px;border-radius:20px;border:0.5px solid var(--border2);background:var(--bg);cursor:pointer;color:var(--text);font-family:inherit;display:flex;align-items:center;gap:4px;transition:all .12s}
+.ver-chip:hover{border-color:var(--border3)}
+.ver-chip.active-ver{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.ver-chip .del-x{font-size:13px;color:var(--text3);line-height:1;padding:0 1px;cursor:pointer}
+.ver-chip .del-x:hover{color:var(--clash-text)}
+.controls-row{padding:8px 16px;display:flex;align-items:center;gap:6px;border-bottom:0.5px solid var(--border);flex-shrink:0;background:var(--bg);flex-wrap:wrap}
+.term-tabs{display:flex;gap:5px}
+.term-tab{padding:5px 14px;font-size:12px;border-radius:var(--radius);border:0.5px solid var(--border2);cursor:pointer;background:transparent;color:var(--text2);font-family:inherit;transition:all .12s}
+.term-tab:hover{background:var(--bg2)}
+.term-tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn{padding:5px 11px;font-size:11px;border:0.5px solid var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;color:var(--text2);font-family:inherit;white-space:nowrap;transition:all .12s}
+.btn:hover{background:var(--bg2)}
+.btn-primary{border-color:var(--accent);color:var(--accent)}
+.btn-primary:hover{background:var(--accent-bg)}
+.btn-danger{border-color:var(--clash-border);color:var(--clash-text)}
+.btn-danger:hover{background:var(--clash-bg)}
+.timetable-wrap{flex:1;overflow:auto;padding:14px 16px}
+.timetable{border-collapse:collapse;width:100%;min-width:580px;font-size:11px}
+.timetable th{padding:5px 7px;text-align:center;color:var(--text2);font-weight:500;border-bottom:0.5px solid var(--border);background:var(--bg2);white-space:nowrap;font-size:11px}
+.timetable td{padding:3px 5px;border:0.5px solid var(--border);min-width:80px;height:48px;vertical-align:top;background:var(--bg)}
+.timetable td.time-col{font-size:10px;color:var(--text2);text-align:right;white-space:nowrap;background:var(--bg2);width:48px;font-weight:500}
+.cell-course{padding:2px 4px;border-radius:3px;margin-bottom:2px;font-size:9px;font-weight:600;line-height:1.3}
+.cell-t4{background:var(--t4-bg);color:var(--t4-text)}
+.cell-t5{background:var(--t5-bg);color:var(--t5-text)}
+.cell-t6{background:var(--t6-bg);color:var(--t6-text)}
+.cell-clash{background:var(--clash-bg);color:var(--clash-text);border:0.5px solid var(--clash-border)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.38);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border2);padding:20px;width:440px;max-width:96vw;max-height:82vh;overflow-y:auto;position:relative}
+.modal h2{font-size:14px;font-weight:600;margin-bottom:4px;padding-right:24px}
+.modal-desc{font-size:11px;color:var(--text2);margin-bottom:14px}
+.modal-close{position:absolute;top:14px;right:14px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text2);line-height:1;font-family:inherit}
+.modal-close:hover{color:var(--text)}
+.sub-card{padding:9px 11px;border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:7px;cursor:pointer;transition:border-color .12s}
+.sub-card:hover{border-color:var(--border2)}
+.sub-card.selected{border-color:var(--accent);background:var(--accent-bg)}
+.name-input{width:100%;padding:8px 10px;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);outline:none;margin-bottom:10px;font-family:inherit}
+.name-input:focus{border-color:var(--accent)}
+.dl-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:4px}
+.dl-btn{padding:12px 6px;border:0.5px solid var(--border2);border-radius:var(--radius-lg);background:var(--bg2);cursor:pointer;text-align:center;font-family:inherit;transition:all .12s}
+.dl-btn:hover{border-color:var(--accent);background:var(--accent-bg)}
+.dl-btn .dl-icon{font-size:20px;margin-bottom:4px}
+.dl-btn .dl-label{font-size:12px;font-weight:600;color:var(--text)}
+.dl-btn .dl-sub{font-size:9px;color:var(--text2);margin-top:2px}
+.dl-status{font-size:11px;color:var(--text2);margin-top:12px;text-align:center;min-height:16px}
+.ics-opts{margin-top:14px;padding-top:14px;border-top:0.5px solid var(--border)}
+.ics-opts label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px}
+.ics-opts input[type=date],.ics-opts input[type=number],.ics-opts select{width:100%;padding:6px 8px;font-size:12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);outline:none;font-family:inherit;margin-bottom:10px}
+.ics-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.unsaved-dot{font-size:10px;color:var(--text3);margin-left:4px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>IIMK Course Planner</h1>
+      <p>Click to select &nbsp;·&nbsp; Right-click for substitutes</p>
+    </div>
+    <div class="search-wrap">
+      <input type="text" id="search" placeholder="Search code, professor..." oninput="render()">
+    </div>
+    <div class="filter-wrap" id="filters"></div>
+    <div class="course-list" id="course-list"></div>
+  </div>
+  <div class="main">
+    <div class="clash-banner" id="clash-banner"></div>
+    <div class="credits-bar" id="credits-bar"></div>
+    <div class="versions-bar" id="versions-bar"></div>
+    <div class="controls-row">
+      <div class="term-tabs" id="term-tabs"></div>
+      <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openSaveModal()">Save version</button>
+        <button class="btn" onclick="openDownloadModal()">Download ↓</button>
+        <button class="btn btn-danger" onclick="clearAll()">Clear all</button>
+      </div>
+    </div>
+    <div class="timetable-wrap">
+      <table class="timetable" id="timetable"></table>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-box">
+    <button class="modal-close" id="modal-close-btn">×</button>
+    <h2 id="modal-title"></h2>
+    <p class="modal-desc" id="modal-desc"></p>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<script>
+const COURSES = [{"code": "EOS-A", "prof": "(Prof. P Rameshan)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "CG-A", "prof": "(Prof. Subramanian S)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "09:15"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "CA-A", "prof": "(Prof. Sreejesh S)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "DW 3.0-A", "prof": "(Prof. Kalpit Sharma)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "AIB-A", "prof": "(Prof. MP Sebastian)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "IGE (LSM)(LSM)-A", "prof": "(Prof. Irfanullah Farooqi)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "20:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "DAR-A", "prof": "(Prof. Soumya Roy)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "MF (FIN)(FIN)-A", "prof": "(Prof. Pankaj Kumar Baag)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "20:30"}, {"day": "WEDNESDAY", "slot": "20:30"}, {"day": "THURSDAY", "slot": "20:30"}]}, {"code": "FC-A", "prof": "(Prof. Mridul Kumar Saggar)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "CV-A", "prof": "(Prof. Abhilash S Nair)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "CB-A", "prof": "(Prof. M Geetha)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "ECOM-A", "prof": "(Prof. Anindita Paul)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "DA-A", "prof": "(Prof. Mohammed Shahid Abdulla)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "LIDA-A", "prof": "(Prof. Unnikrishnan Nair)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "FD-A", "prof": "(Prof. SSS Kumar)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "QI (LSM-Core)-A", "prof": "(TBD)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "20:30"}, {"day": "WEDNESDAY", "slot": "20:30"}]}, {"code": "MITPS-A", "prof": "(Prof. Mohammed Shahid Abdulla)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "DBT-A", "prof": "(Prof. Radhakrishna Pillai R)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "CV (FIN-Core)-A", "prof": "(Prof. Abhilash S Nair)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "TUESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "FIS-A", "prof": "(Prof. Abhinav Anand)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "ECOM (LSM)(LSM)-A", "prof": "(Prof. Anindita Paul)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "MBGAI (LSM)(LSM)-A", "prof": "(Prof. Swati Jain)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "LME-A", "prof": "(Prof. Shannu Narayan)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "MBM-B", "prof": "(Prof. Joffi Thomas)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "20:30"}, {"day": "WEDNESDAY", "slot": "20:30"}, {"day": "THURSDAY", "slot": "20:30"}]}, {"code": "MRBDM (SS)-A", "prof": "(Prof. Sreejesh S)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "EOS-B", "prof": "(Prof. P Rameshan)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "10:45"}]}, {"code": "GT-B", "prof": "(Prof. Anirban Ghatak)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "TUESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "GT-C", "prof": "(Prof. Anirban Ghatak)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "ILM-A", "prof": "(Prof. Irfanullah Farooqi)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "THURSDAY", "slot": "19:00"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "NCM (Manoranjan)-B", "prof": "(Prof. Manoranjan Dhal)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "MBM-A", "prof": "(Prof. Joffi Thomas)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "ILM-B", "prof": "(Prof. Irfanullah Farooqi)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "20:30"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "THURSDAY", "slot": "20:30"}]}, {"code": "PM(LSM)-A", "prof": "(Prof. Rupesh Kumar Pati)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "GT-A", "prof": "(Prof. Anirban Ghatak)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "HSCM(LSM)-A", "prof": "(Prof. Anand G)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "MBGAI-A", "prof": "(Prof. Swati Jain)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "NCM (Manoranjan)-A", "prof": "(Prof. Manoranjan Dhal)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "STA (LSM)(LSM)-A", "prof": "(Prof. Nivedhitha KS)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "PF (FIN-Core)-A", "prof": "(Prof. Pankaj Kumar Baag)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "TUESDAY", "slot": "20:30"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "POF-A", "prof": "(Prof. Salamah Ansari)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "IAPM-A", "prof": "(Prof. Aravind Sampath)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "IAPM-B", "prof": "(Prof. Aravind Sampath)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "TUESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "MRBDM (OK)-A", "prof": "(Prof. Omkumar Krishnan)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "SCM-B", "prof": "(Prof. Arnab Adhikari)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "YMHC-A", "prof": "(Prof. Judu Ilavarasu)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "WTKY (LSM)(LSM)-A", "prof": "(Prof. Judu Ilavarasu)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "TUESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "PM (GT)-A", "prof": "(Prof. G Thangamani)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "IPR-A", "prof": "(Prof. Deva Prasad M)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "SCM-A", "prof": "(Prof. Arnab Adhikari)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "SMA-B", "prof": "(Prof. Satish Krishnan)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "EMPC-A", "prof": "(Prof. Varun Yadav)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "EMPC(Fin)(FIN)-A", "prof": "(Prof. Varun Yadav)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "MAAS-A", "prof": "(Prof. Dharun Kasilingam)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "SMA-A", "prof": "(Prof. Satish Krishnan)", "term": "T4", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "CMO-A", "prof": "(Prof. Priya Narayanan)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "CBM-A", "prof": "(Prof. Pankaj Kumar Baag)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "WIS-B", "prof": "(Prof. Irfanullah Farooqi)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "20:30"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "FRIDAY", "slot": "20:30"}]}, {"code": "CONSULTING-A", "prof": "(Prof. Rajesh S Upadhyayula)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "CS-A", "prof": "(Prof. A Sreejith)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "GC-C", "prof": "(Prof. AF Mathew)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "17:30"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "FIS (FIN-core)-A", "prof": "(Prof. Abhinav Anand)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "GBS-A", "prof": "(Prof. Venkataraman S)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "EITRM-A", "prof": "(Prof. Kalpit Sharma)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "GDBD-A", "prof": "(Prof. Kalpit Sharma)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "17:30"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "GWO (LSM)(LSM)-A", "prof": "(Prof. Rajeshwari C)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "LLIR-A", "prof": "(Prof. Manoranjan Dhal)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "GBS-B", "prof": "(Prof. Venkataraman S)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "10:45"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "10:45"}]}, {"code": "IB-A", "prof": "(Prof. P Rameshan)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "GC-A", "prof": "(Prof. AF Mathew)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "GC-B", "prof": "(Prof. AF Mathew)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "WIS-A", "prof": "(Prof. Irfanullah Farooqi)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "MOM-A", "prof": "(Prof. Ekta Srivastava)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "MIO-A", "prof": "(Prof. Ankur Jain)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "SDM-A", "prof": "(Prof. G Sridhar)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "RTM-A", "prof": "(Prof. M Geetha)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "IB-B", "prof": "(Prof. P Rameshan)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "ST (FIN-Core)-A", "prof": "(Prof. Pratima Verma)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "SBRA-A", "prof": "(Prof. Venkataraman S)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "POSS-A", "prof": "(Prof. Deepak Dhayanithy)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "UPP (LSM)(LSM)-A", "prof": "(Prof. Salamah Ansari)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "PSM (LSM-Core)-A", "prof": "(Prof. Anisa Bhutia)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "SOMA-A", "prof": "(Prof. Anand G)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "VC-A", "prof": "(Prof. Anisa Bhutia)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "VC (LSM)(LSM)-A", "prof": "(Prof. Anisa Bhutia)", "term": "T4", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "NCM (Vijay)-A", "prof": "(Prof. Vijay Kuriakose)", "term": "T4", "slots": [{"day": "WEDNESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "Fcri(FIN)-A", "prof": "(Prof. Mridul Kumar Saggar)", "term": "T4", "slots": [{"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "MLSBG-A", "prof": "(Prof. Radhakrishna Pillai R)", "term": "T4", "slots": [{"day": "FRIDAY", "slot": "09:15"}]}, {"code": "DS (LSM-Core)-A", "prof": "(Prof. Manoranjan Dhal)", "term": "T4", "slots": [{"day": "SATURDAY", "slot": "09:15"}, {"day": "SUNDAY", "slot": "09:15"}]}, {"code": "AMMR-A", "prof": "(Prof. Sreejesh S)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "BS-A", "prof": "(Prof. Nycil George)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "BS-B", "prof": "(Prof. Nycil George)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "TUESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "AIB_t5-A", "prof": "(Prof. MP Sebastian)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "ECOM_t5-B", "prof": "(Prof. Anindita Paul)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "FMA (FIN-Core)-A", "prof": "(Prof. Qambar Abidi)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "BPP (LSM-Core)-A", "prof": "(TBD)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "IMC-B", "prof": "Prof. Ekta Srivastava)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "20:30"}, {"day": "WEDNESDAY", "slot": "20:30"}, {"day": "THURSDAY", "slot": "20:30"}]}, {"code": "CSL-A", "prof": "(Prof. P Rameshan)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "GT_t5-A", "prof": "(Prof. Anirban Ghatak)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "DAR (SC)-A", "prof": "(Prof. Shovan Chowdhury)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "ECOM_t5-A", "prof": "(Prof. Anindita Paul)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "IMPACT-A", "prof": "(Prof. Priya Nair Rajeev)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}]}, {"code": "PM (JP)-B", "prof": "(Prof. Jinil Persis)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "FMA-A", "prof": "(Prof. Qambar Abidi)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "EM (LSM)(LSM)-A", "prof": "(Prof. Deepak S Kumar)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}]}, {"code": "MFB-A", "prof": "(Prof. Subramanian S)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "ER-A", "prof": "(Prof. Sony Thomas)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "MME_t5-A", "prof": "(Prof. Sudhanshu Maheshwari)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "MACR-A", "prof": "(TBD)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "SADD-A", "prof": "(Prof. Kapil Gupta)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "IMC-A", "prof": "(Prof. Ekta Srivastava)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "IF-A", "prof": "(Prof. Ekta Sikarwar)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "SCM_t5-B", "prof": "(Prof. Ramesh Krishnan)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "10:45"}]}, {"code": "GT_t5-B", "prof": "(Prof. Anirban Ghatak)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "TUESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "MMT-A", "prof": "(Prof. Priya Narayanan)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "MEIW-A", "prof": "(Prof. Manoranjan Dhal)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "SADD-B", "prof": "(Prof. Kapil Gupta)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "TUESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "LS-A", "prof": "(Prof. Anand G)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "SI (LSM-Core)-A", "prof": "(Prof. Priya Nair Rajeev", "term": "T5", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "MMC (LSM)(LSM)-A", "prof": "(Prof. Suraj Gogoi)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "CSL-B", "prof": "(Prof. P Rameshan)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}]}, {"code": "SM-A", "prof": "(Prof. Pronobesh Banerjee)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "WTKY-A", "prof": "(Prof. Judu Ilavarasu)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "PM (JP)-A", "prof": "(Prof. Jinil Persis)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "SIAT-A", "prof": "(Prof. Anita Kerai)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "UPP-A", "prof": "(Prof. Salamah Ansari)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "IF (FIN-Core)-A", "prof": "(Prof. Ekta Sikarwar)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "SCM_t5-A", "prof": "(Prof. Ramesh Krishnan)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "CB (LSM)(LSM)-A", "prof": "(Prof. Gladys Stephen)", "term": "T5", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "CB_t5-A", "prof": "(Prof. Aishwarya Ramasundaram)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "IMC (LSM)(LSM)-A", "prof": "(Prof. Ekta Srivastava)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "FRA-A", "prof": "(Prof. Sudershan Kuntluru)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "DIBT (LSM-Core)-A", "prof": "(Prof. Rupesh Kumar Pati)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "DVT-A", "prof": "(Prof. Vidushi Pandey)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "DVT-B", "prof": "(Prof. Vidushi Pandey)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "MOSHT(LSM)-A", "prof": "(Prof. Anand G)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "FRM (FIN-Core)-A", "prof": "(Prof. Abhinav Anand)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "SCF-A", "prof": "(Prof. Aswin Alora)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "NWE-A", "prof": "(Prof. Priya Nair Rajeev)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "MAJVCG-A", "prof": "(Prof. P Rameshan)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "FS-A", "prof": "(Prof. AF Mathew)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "FS (LSM)(LSM)-A", "prof": "(Prof. AF Mathew)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "MCS(Fin)(FIN)-A", "prof": "(Prof. VG Sridharan)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "17:30"}]}, {"code": "YMHC (LSM)(LSM)-A", "prof": "(Prof. Judu Ilavarasu)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "SFRP-A", "prof": "(Prof. Pratima Verma)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "OSD (FIN-Core)-A", "prof": "(Prof. Anjana A Karumathil)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "10:45"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "10:45"}]}, {"code": "MMC-A", "prof": "(Prof. Suraj Gogoi)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "MAJVCG-B", "prof": "(Prof. P Rameshan)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "MCS-A", "prof": "(Prof. VG Sridharan)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "SDM_t5-A", "prof": "(Prof. Aishwarya Ramasundaram)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "SGC-A", "prof": "(Prof. Deepak Dhayanithy)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "SI-A", "prof": "(Prof. Sumit Mitra)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "TTC(LSM)-A", "prof": "(Prof. Praveen S)", "term": "T5", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "MOS-A", "prof": "(Prof. Joshy Joseph)", "term": "T5", "slots": [{"day": "WEDNESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "MOS-B", "prof": "(Prof. Joshy Joseph)", "term": "T5", "slots": [{"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "MSB (LSM-Core)-A", "prof": "(TBD)", "term": "T5", "slots": [{"day": "FRIDAY", "slot": "20:30"}, {"day": "SATURDAY", "slot": "10:45"}, {"day": "SUNDAY", "slot": "10:45"}]}, {"code": "AL (LSM-Core)-A", "prof": "(TBD)", "term": "T5", "slots": [{"day": "SATURDAY", "slot": "09:15"}, {"day": "SUNDAY", "slot": "09:15"}]}, {"code": "AIS-A", "prof": "(Prof. Subramanian S)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "CGE (FIN-Core)-A", "prof": "(TBD)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "DAR (SC)_t6-A", "prof": "(Prof. Shovan Chowdhury)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "10:45"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "MIS-A", "prof": "(Prof. Priya Narayanan)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "14:30"}, {"day": "TUESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "GWO-A", "prof": "(Prof. Rajeshwari C)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "MME-B", "prof": "(Prof. Sudhanshu Maheshwari)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "TUESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "EIL (FIN-Core)-A", "prof": "(Prof. Priya Nair Rajeev)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "09:15"}, {"day": "WEDNESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "09:15"}]}, {"code": "SS-A", "prof": "(Prof. G Thangamani)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "10:45"}, {"day": "TUESDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "10:45"}]}, {"code": "MME-A", "prof": "(Prof. Sudhanshu Maheshwari)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "BG-A", "prof": "(Prof. Shubhasis Dey)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "PEEF (FIN)(FIN)-A", "prof": "(Prof. Pankaj Kumar Baag)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "PPA-A", "prof": "(Prof. Sthanu R Nair)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "STA-A", "prof": "(Prof. Nivedhitha KS)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "17:30"}, {"day": "TUESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}]}, {"code": "STA-B", "prof": "(Prof. Nivedhitha KS)", "term": "T6", "slots": [{"day": "MONDAY", "slot": "19:00"}, {"day": "TUESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}]}, {"code": "RAI-A", "prof": "(Prof. Radhakrishna Pillai R)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "09:15"}, {"day": "THURSDAY", "slot": "10:45"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "CSGP-A", "prof": "(Prof. Deepak Dhayanithy)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "CCC-A", "prof": "(Prof. Deepa Sethi)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "CCC-B", "prof": "(Prof. Deepa Sethi)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "DG-A", "prof": "(Prof. Praveen S)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "CSGP-B", "prof": "(Prof. Deepak Dhayanithy)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "PRICING-A", "prof": "(Prof. Nivedita Bhanja)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "ECA-A", "prof": "(Prof. Qambar Abidi)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "FRIDAY", "slot": "12:15"}]}, {"code": "ECA (FIN)(FIN)-A", "prof": "(Prof. Qambar Abidi)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "SM_t6-B", "prof": "(Prof. Pronobesh Banerjee)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "16:00"}, {"day": "WEDNESDAY", "slot": "16:00"}, {"day": "FRIDAY", "slot": "16:00"}]}, {"code": "DPI_t6-A", "prof": "(Prof. Salamah Ansari)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "19:00"}, {"day": "WEDNESDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "SBRA(Fin)(FIN)-A", "prof": "(Prof. Venkataraman S)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "12:15"}, {"day": "WEDNESDAY", "slot": "12:15"}, {"day": "THURSDAY", "slot": "12:15"}]}, {"code": "SM_t6-A", "prof": "(Prof. Pronobesh Banerjee)", "term": "T6", "slots": [{"day": "TUESDAY", "slot": "14:30"}, {"day": "WEDNESDAY", "slot": "14:30"}, {"day": "FRIDAY", "slot": "14:30"}]}, {"code": "ENV-A", "prof": "(Prof. Kamal Kishore Sharma)", "term": "T6", "slots": [{"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}, {"day": "FRIDAY", "slot": "19:00"}]}, {"code": "PPBM-A", "prof": "(Prof. Joshy Joseph)", "term": "T6", "slots": [{"day": "WEDNESDAY", "slot": "17:30"}, {"day": "THURSDAY", "slot": "17:30"}, {"day": "FRIDAY", "slot": "09:15"}]}, {"code": "PPBM-B", "prof": "(Prof. Joshy Joseph)", "term": "T6", "slots": [{"day": "WEDNESDAY", "slot": "19:00"}, {"day": "THURSDAY", "slot": "19:00"}, {"day": "FRIDAY", "slot": "10:45"}]}];
+
+const NITYA = new Set(["AIB-A","CS-A","GT-A","GT-B","GT-C","GC-A","GC-B","GC-C","YMHC-A","SDM-A","MRBDM (SS)-A","MRBDM (OK)-A","NCM (Manoranjan)-A","NCM (Manoranjan)-B","MIO-A","WIS-A","WIS-B","ILM-A","ILM-B","LIDA-A","CA-A","CB-A","ECOM-A","DA-A","CONSULTING-A","RTM-A","MOS-A","MOS-B","SM-A","SADD-A","SADD-B","PPBM-A","PPBM-B","DPI_t6-A","SS-A","CSGP-A","CSGP-B","AIS-A"]);
+const CREDITS = {T4:{min:18,max:21},T5:{min:15,max:18},T6:{min:6,max:9}};
+const DAYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"];
+const SLOTS = ["09:15","10:45","12:15","14:30","16:00","17:30","19:00","20:30"];
+const DAY_NUM = {MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:0};
+
+let selected = new Set();
+let activeFilter = "all";
+let activeTerm = "T4";
+let versions = [];
+let activeVerIdx = -1;
+
+const gsk = (d,s) => d+"_"+s;
+
+function getSlotMap(){
+  const m={};
+  for(const code of selected){
+    const c=COURSES.find(x=>x.code===code);if(!c)continue;
+    for(const s of c.slots){
+      const k=c.term+"_"+gsk(s.day,s.slot);
+      if(!m[k])m[k]=[];m[k].push(code);
+    }
+  }
+  return m;
+}
+function getClashes(){
+  const m=getSlotMap(),cl=new Set();
+  for(const[,codes]of Object.entries(m))if(codes.length>1)codes.forEach(c=>cl.add(c));
+  return cl;
+}
+function getCredits(term){
+  let t=0;
+  for(const code of selected){const c=COURSES.find(x=>x.code===code);if(c&&c.term===term)t+=3;}
+  return t;
+}
+function toggleCourse(code){
+  selected.has(code)?selected.delete(code):selected.add(code);
+  activeVerIdx=-1;render();
+}
+function clearAll(){selected.clear();activeVerIdx=-1;render();}
+
+// VERSIONS
+function openSaveModal(){
+  setModal("Save current timetable",`Saves all ${selected.size} selected course(s) across T4, T5 and T6.`,
+    `<input type="text" class="name-input" id="ver-name" placeholder='e.g. "Top choice", "Backup plan"'>
+     <button class="btn btn-primary" style="width:100%;padding:8px;font-size:13px" onclick="saveVersion()">Save version</button>`);
+  setTimeout(()=>{const el=document.getElementById("ver-name");if(el)el.focus();},50);
+}
+function saveVersion(){
+  const el=document.getElementById("ver-name");
+  const name=(el?el.value.trim():"")||("Version "+(versions.length+1));
+  versions.push({name,courses:[...selected],savedAt:new Date().toLocaleTimeString()});
+  activeVerIdx=versions.length-1;closeModal();render();
+}
+function loadVersion(idx){selected=new Set(versions[idx].courses);activeVerIdx=idx;render();}
+function deleteVersion(idx){
+  versions.splice(idx,1);
+  if(activeVerIdx===idx)activeVerIdx=-1;
+  else if(activeVerIdx>idx)activeVerIdx--;
+  render();
+}
+
+// DOWNLOAD
+function openDownloadModal(){
+  const today=new Date();
+  const dd=String(today.getDate()).padStart(2,'0');
+  const mm=String(today.getMonth()+1).padStart(2,'0');
+  const yyyy=today.getFullYear();
+  const todayStr=`${yyyy}-${mm}-${dd}`;
+  setModal("Download timetable","Export your selected courses in any format.",
+    `<div class="dl-grid">
+      <div class="dl-btn" onclick="downloadXLSX()"><div class="dl-icon">📊</div><div class="dl-label">XLSX</div><div class="dl-sub">Excel</div></div>
+      <div class="dl-btn" onclick="downloadJPG()"><div class="dl-icon">🖼</div><div class="dl-label">JPG</div><div class="dl-sub">Image</div></div>
+      <div class="dl-btn" onclick="downloadPDF()"><div class="dl-icon">📄</div><div class="dl-label">PDF</div><div class="dl-sub">Print</div></div>
+      <div class="dl-btn" onclick="downloadICS()"><div class="dl-icon">📅</div><div class="dl-label">ICS</div><div class="dl-sub">Calendar</div></div>
+    </div>
+    <div class="dl-status" id="dl-status"></div>
+    <div class="ics-opts">
+      <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text)">ICS calendar settings</div>
+      <div class="ics-row">
+        <div>
+          <label>Term start date</label>
+          <input type="date" id="ics-start" value="${todayStr}">
+        </div>
+        <div>
+          <label>Weeks to repeat</label>
+          <input type="number" id="ics-weeks" value="12" min="1" max="26">
+        </div>
+      </div>
+      <label>Which terms to export</label>
+      <select id="ics-terms">
+        <option value="all">All terms (T4 + T5 + T6)</option>
+        <option value="T4">T4 only</option>
+        <option value="T5">T5 only</option>
+        <option value="T6">T6 only</option>
+        <option value="current">Current tab (${activeTerm})</option>
+      </select>
+      <p style="font-size:10px;color:var(--text3);margin-top:-4px">Classes will repeat weekly from the start date for the number of weeks specified. Import the .ics file into Google Calendar, Apple Calendar, or Outlook.</p>
+    </div>`);
+}
+
+function setDlStatus(msg){const el=document.getElementById("dl-status");if(el)el.textContent=msg;}
+
+function buildTableData(){
+  const sm=getSlotMap();
+  const rows=[["Time",...DAYS.map(d=>d.slice(0,3))]];
+  for(const slot of SLOTS){
+    const row=[slot];
+    for(const day of DAYS){
+      const k=activeTerm+"_"+gsk(day,slot);
+      row.push((sm[k]||[]).join(", "));
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function downloadXLSX(){
+  setDlStatus("Generating Excel...");
+  try{
+    const rows=buildTableData();
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"]=[{wch:8},{wch:18},{wch:18},{wch:18},{wch:18},{wch:18}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,activeTerm+" Timetable");
+    const sel=[...selected].map(code=>{
+      const c=COURSES.find(x=>x.code===code);
+      return c?[c.code,c.term,c.prof,c.slots.map(s=>s.day.slice(0,3)+" "+s.slot).join(", ")]:null;
+    }).filter(Boolean);
+    const ws2=XLSX.utils.aoa_to_sheet([["Course","Term","Professor","Slots"],...sel]);
+    ws2["!cols"]=[{wch:22},{wch:6},{wch:28},{wch:40}];
+    XLSX.utils.book_append_sheet(wb,ws2,"All Selected");
+    XLSX.writeFile(wb,"IIMK_Timetable_"+activeTerm+".xlsx");
+    setDlStatus("✓ Downloaded!");
+  }catch(e){setDlStatus("Error: "+e.message);}
+}
+
+async function getCanvas(){
+  const el=document.getElementById("timetable");
+  const wrap=document.createElement("div");
+  wrap.style.cssText="position:fixed;left:-9999px;top:0;background:#fff;padding:20px;font-family:-apple-system,sans-serif;width:900px";
+  const title=document.createElement("div");
+  title.style.cssText="font-size:15px;font-weight:600;margin-bottom:12px;color:#1a1a1a";
+  title.textContent="IIMK "+activeTerm+" Timetable";
+  wrap.appendChild(title);
+  const clone=el.cloneNode(true);
+  clone.style.cssText="border-collapse:collapse;font-size:11px;width:100%";
+  clone.querySelectorAll(".cell-t4").forEach(e=>{e.style.background="#EAF3DE";e.style.color="#3B6D11";});
+  clone.querySelectorAll(".cell-t5").forEach(e=>{e.style.background="#E6F1FB";e.style.color="#185FA5";});
+  clone.querySelectorAll(".cell-t6").forEach(e=>{e.style.background="#FAEEDA";e.style.color="#854F0B";});
+  clone.querySelectorAll(".cell-clash").forEach(e=>{e.style.background="#FCEBEB";e.style.color="#A32D2D";});
+  clone.querySelectorAll("th").forEach(e=>{e.style.background="#f4f4f4";e.style.color="#555";e.style.padding="6px 8px";e.style.border="0.5px solid #ddd";e.style.fontWeight="500";});
+  clone.querySelectorAll("td").forEach(e=>{e.style.border="0.5px solid #ddd";e.style.padding="4px 6px";e.style.minWidth="80px";e.style.height="46px";e.style.verticalAlign="top";e.style.background="#fff";});
+  clone.querySelectorAll(".time-col").forEach(e=>{e.style.background="#f9f9f9";e.style.color="#888";e.style.fontSize="10px";e.style.textAlign="right";e.style.width="50px";});
+  wrap.appendChild(clone);
+  document.body.appendChild(wrap);
+  const canvas=await html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false});
+  document.body.removeChild(wrap);
+  return canvas;
+}
+
+async function downloadJPG(){
+  setDlStatus("Rendering image...");
+  try{
+    const canvas=await getCanvas();
+    const a=document.createElement("a");
+    a.href=canvas.toDataURL("image/jpeg",0.95);
+    a.download="IIMK_Timetable_"+activeTerm+".jpg";
+    a.click();
+    setDlStatus("✓ Downloaded!");
+  }catch(e){setDlStatus("Error: "+e.message);}
+}
+
+async function downloadPDF(){
+  setDlStatus("Generating PDF...");
+  try{
+    const canvas=await getCanvas();
+    const imgData=canvas.toDataURL("image/jpeg",0.95);
+    const{jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+    const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+    const ar=canvas.width/canvas.height;
+    let iw=pw-20,ih=iw/ar;
+    if(ih>ph-20){ih=ph-20;iw=ih*ar;}
+    pdf.setFontSize(13);pdf.setTextColor(30);
+    pdf.text("IIMK "+activeTerm+" Timetable",10,11);
+    pdf.addImage(imgData,"JPEG",10,16,iw,ih);
+    pdf.save("IIMK_Timetable_"+activeTerm+".pdf");
+    setDlStatus("✓ Downloaded!");
+  }catch(e){setDlStatus("Error: "+e.message);}
+}
+
+// ICS EXPORT
+function downloadICS(){
+  setDlStatus("Building calendar...");
+  try{
+    const startEl=document.getElementById("ics-start");
+    const weeksEl=document.getElementById("ics-weeks");
+    const termsEl=document.getElementById("ics-terms");
+    const startStr=startEl?startEl.value:"";
+    const weeks=weeksEl?parseInt(weeksEl.value)||12:12;
+    const termsVal=termsEl?termsEl.value:"all";
+
+    if(!startStr){setDlStatus("Please set a start date.");return;}
+
+    const [sy,sm,sd]=startStr.split("-").map(Number);
+    const startDate=new Date(sy,sm-1,sd);
+
+    // Determine which courses to export
+    let exportCodes=[...selected];
+    if(termsVal==="T4")exportCodes=exportCodes.filter(c=>{const x=COURSES.find(o=>o.code===c);return x&&x.term==="T4";});
+    else if(termsVal==="T5")exportCodes=exportCodes.filter(c=>{const x=COURSES.find(o=>o.code===c);return x&&x.term==="T5";});
+    else if(termsVal==="T6")exportCodes=exportCodes.filter(c=>{const x=COURSES.find(o=>o.code===c);return x&&x.term==="T6";});
+    else if(termsVal==="current")exportCodes=exportCodes.filter(c=>{const x=COURSES.find(o=>o.code===c);return x&&x.term===activeTerm;});
+
+    if(!exportCodes.length){setDlStatus("No courses selected for export.");return;}
+
+    const lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//IIMK Course Planner//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+
+    const pad2=n=>String(n).padStart(2,"0");
+    const fmtDate=(d)=>`${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+    const fmtDateTime=(d,hhmm)=>{
+      const[hh,min]=hhmm.split(":").map(Number);
+      return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(hh)}${pad2(min)}00`;
+    };
+
+    // Duration: each class is 90 min
+    const uid_base=Date.now();
+    let uid_counter=0;
+
+    for(const code of exportCodes){
+      const course=COURSES.find(x=>x.code===code);
+      if(!course)continue;
+      for(const slot of course.slots){
+        const dayOffset=DAY_NUM[slot.day]; // 0=Sun,1=Mon,...
+        // Find the first occurrence on or after startDate
+        const startDow=startDate.getDay(); // 0=Sun
+        let diff=dayOffset-startDow;
+        if(diff<0)diff+=7;
+        const firstOcc=new Date(startDate);
+        firstOcc.setDate(startDate.getDate()+diff);
+
+        // End time = start + 90min
+        const[hh,mm]=slot.slot.split(":").map(Number);
+        const endHH=Math.floor((hh*60+mm+90)/60);
+        const endMM=(hh*60+mm+90)%60;
+        const endTime=`${pad2(endHH)}:${pad2(endMM)}`;
+
+        const dtstart=fmtDateTime(firstOcc,slot.slot);
+        const dtend=fmtDateTime(firstOcc,endTime);
+
+        // UNTIL = startDate + weeks*7 days
+        const untilDate=new Date(startDate);
+        untilDate.setDate(startDate.getDate()+weeks*7);
+        const until=fmtDate(untilDate)+"T235959Z";
+
+        lines.push("BEGIN:VEVENT");
+        lines.push(`UID:iimk-${uid_base}-${uid_counter++}@iimk-planner`);
+        lines.push(`DTSTART:${dtstart}`);
+        lines.push(`DTEND:${dtend}`);
+        lines.push(`RRULE:FREQ=WEEKLY;UNTIL=${until}`);
+        lines.push(`SUMMARY:${course.code} [${course.term}]`);
+        lines.push(`DESCRIPTION:${course.prof}\\nTerm: ${course.term}\\nSlot: ${slot.day} ${slot.slot}`);
+        lines.push(`LOCATION:IIMK`);
+        lines.push("END:VEVENT");
+      }
+    }
+
+    lines.push("END:VCALENDAR");
+    const icsContent=lines.join("\r\n");
+    const blob=new Blob([icsContent],{type:"text/calendar;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="IIMK_Timetable.ics";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setDlStatus("✓ Downloaded! Import into Google/Apple/Outlook Calendar.");
+  }catch(e){setDlStatus("Error: "+e.message);}
+}
+
+// SUBSTITUTES
+function showSubstitutes(e,code){
+  e.preventDefault();
+  const course=COURSES.find(c=>c.code===code);if(!course)return;
+  const mySlots=new Set(course.slots.map(s=>gsk(s.day,s.slot)));
+  const subs=COURSES
+    .filter(c=>c.code!==code&&c.term===course.term&&c.slots.some(s=>mySlots.has(gsk(s.day,s.slot))))
+    .map(c=>({c,overlap:c.slots.filter(s=>mySlots.has(gsk(s.day,s.slot))).length}))
+    .sort((a,b)=>b.overlap-a.overlap);
+  const body=subs.length===0
+    ?`<div class="empty">No courses share any slot in ${course.term}</div>`
+    :subs.map(({c,overlap})=>{
+      const isSel=selected.has(c.code),isN=NITYA.has(c.code);
+      const oc=overlap===3?"#EAF3DE":overlap===2?"#E6F1FB":"#FAEEDA";
+      const tc=overlap===3?"#3B6D11":overlap===2?"#185FA5":"#854F0B";
+      return `<div class="sub-card ${isSel?"selected":""}" onclick="toggleCourse('${c.code.replace(/'/g,"\\'")}')">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:600">${c.code}</span>
+          <div style="display:flex;gap:4px">${isN?'<span class="tag tag-nitya">Sample</span>':''}<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${oc};color:${tc};font-weight:500">${overlap} slot${overlap>1?"s":""} overlap</span></div>
+        </div>
+        <div style="font-size:10px;color:#6b6b6b;margin-top:3px">${c.prof}</div>
+        <div style="font-size:9px;color:#a0a0a0;margin-top:2px">${c.slots.map(s=>s.day.slice(0,3)+" "+s.slot).join(", ")}</div>
+      </div>`;
+    }).join("");
+  setModal("Substitutes for "+code,`${course.term} · ${course.prof} · ${subs.length} alternatives with overlapping slots`,body);
+}
+
+// MODAL
+function setModal(title,desc,body){
+  document.getElementById("modal-title").textContent=title;
+  document.getElementById("modal-desc").textContent=desc;
+  document.getElementById("modal-body").innerHTML=body;
+  document.getElementById("modal-overlay").classList.add("open");
+}
+function closeModal(){document.getElementById("modal-overlay").classList.remove("open");}
+document.getElementById("modal-overlay").addEventListener("click",e=>{if(e.target===document.getElementById("modal-overlay"))closeModal();});
+document.getElementById("modal-close-btn").addEventListener("click",closeModal);
+
+// RENDER
+function render(){
+  renderFilters();renderCourseList();renderCredits();
+  renderVersionsBar();renderTabs();renderTimetable();renderClashBanner();
+}
+function renderFilters(){
+  const filters=[{id:"all",label:"All"},{id:"T4",label:"T4"},{id:"T5",label:"T5"},{id:"T6",label:"T6"},{id:"nitya",label:"Sample plan"}];
+  document.getElementById("filters").innerHTML=filters.map(f=>
+    `<button class="pill ${activeFilter===f.id?"active":""}" onclick="activeFilter='${f.id}';render()">${f.label}</button>`
+  ).join("");
+}
+function renderCourseList(){
+  const q=document.getElementById("search").value.toLowerCase();
+  const clashes=getClashes();
+  const list=COURSES.filter(c=>{
+    if(activeFilter==="T4"||activeFilter==="T5"||activeFilter==="T6")return c.term===activeFilter;
+    if(activeFilter==="nitya")return NITYA.has(c.code);
+    return true;
+  }).filter(c=>!q||c.code.toLowerCase().includes(q)||c.prof.toLowerCase().includes(q));
+  const el=document.getElementById("course-list");
+  if(!list.length){el.innerHTML='<div class="empty">No courses found</div>';return;}
+  el.innerHTML=list.map(c=>{
+    const isSel=selected.has(c.code),isClash=clashes.has(c.code),isN=NITYA.has(c.code);
+    return `<div class="course-card ${isSel?"selected":""} ${isClash?"clashing":""}"
+      onclick="toggleCourse('${c.code.replace(/'/g,"\\'")}') "
+      oncontextmenu="showSubstitutes(event,'${c.code.replace(/'/g,"\\'")}')">
+      <div class="course-top">
+        <span class="course-code">${c.code}</span>
+        <div class="course-meta">${isN?'<span class="tag tag-nitya">Sample</span>':''}<span class="tag tag-${c.term.toLowerCase()}">${c.term}</span></div>
+      </div>
+      <div class="course-prof">${c.prof}</div>
+      <div class="course-slots">${c.slots.map(s=>s.day.slice(0,3)+" "+s.slot).join(", ")}</div>
+    </div>`;
+  }).join("");
+}
+function renderCredits(){
+  document.getElementById("credits-bar").innerHTML=["T4","T5","T6"].map(term=>{
+    const got=getCredits(term),{min,max}=CREDITS[term];
+    const pct=Math.min(100,Math.round(got/max*100));
+    const cls=got<min?"credit-low":got>max?"credit-over":"credit-ok";
+    return `<div class="credit-term"><div class="credit-label">${term}: <b>${got}</b> cr &nbsp;(${min}–${max})</div><div class="credit-track"><div class="credit-fill ${cls}" style="width:${pct}%"></div></div></div>`;
+  }).join("");
+}
+function renderVersionsBar(){
+  const el=document.getElementById("versions-bar");
+  if(!versions.length){el.innerHTML='<span class="versions-label">No saved versions — click "Save version" to snapshot your selection</span>';return;}
+  el.innerHTML='<span class="versions-label">Versions:</span>'+
+    versions.map((v,i)=>`<div class="ver-chip ${activeVerIdx===i?"active-ver":""}"><span onclick="loadVersion(${i})">${v.name}</span><span class="del-x" onclick="event.stopPropagation();deleteVersion(${i})">×</span></div>`).join("")+
+    (activeVerIdx===-1&&selected.size?'<span class="unsaved-dot">· unsaved changes</span>':'');
+}
+function renderTabs(){
+  document.getElementById("term-tabs").innerHTML=["T4","T5","T6"].map(t=>
+    `<button class="term-tab ${activeTerm===t?"active":""}" onclick="activeTerm='${t}';render()">${t}</button>`
+  ).join("");
+}
+function renderTimetable(){
+  const sm=getSlotMap(),clashes=getClashes();
+  let html=`<thead><tr><th style="width:48px">Time</th>${DAYS.map(d=>`<th>${d.slice(0,3)}</th>`).join("")}</tr></thead><tbody>`;
+  for(const slot of SLOTS){
+    html+=`<tr><td class="time-col">${slot}</td>`;
+    for(const day of DAYS){
+      const k=activeTerm+"_"+gsk(day,slot);
+      const codes=sm[k]||[];
+      const isClash=codes.length>1||codes.some(c=>clashes.has(c));
+      html+=`<td>${codes.map(code=>`<div class="cell-course ${isClash?"cell-clash":"cell-"+activeTerm.toLowerCase()}">${code}</div>`).join("")}</td>`;
+    }
+    html+="</tr>";
+  }
+  html+="</tbody>";
+  document.getElementById("timetable").innerHTML=html;
+}
+function renderClashBanner(){
+  const cl=getClashes(),el=document.getElementById("clash-banner");
+  if(!cl.size){el.style.display="none";return;}
+  el.style.display="block";
+  el.textContent="⚠ Clash: "+[...cl].join(", ");
+}
+render();
+</script>
+<div style="position:fixed;right:12px;bottom:10px;font:11px -apple-system,sans-serif;color:#888;background:rgba(255,255,255,.9);padding:4px 8px;border-radius:6px;z-index:999">Built by <a href="/" style="color:inherit">Shouvik Sarkar</a></div>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
