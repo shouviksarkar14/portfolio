@@ -10,3 +10,5 @@ Personal portfolio of Shouvik Sarkar, product manager. Plain HTML, no build step
 | `/planner/` | IIMK course planner: elective timetable with live clash detection, substitutes, saved versions and exports |
 
 The live Switch Board syncs from Gmail on a schedule and is private. The full Casebook Studio library is private.
+
+For how to work on this repo, see [HANDOFF.md](HANDOFF.md).
