@@ -1,0 +1,1183 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casebook Studio · demo</title>
+<style>
+:root{
+  --bg:#eef0f4; --panel:#ffffff; --panel-2:#f5f6f9; --ink:#12213b; --ink-2:#4a566b;
+  --ink-3:#8a93a6; --line:#e0e3ea; --line-2:#cdd2dd; --accent:#1f4e9c; --accent-soft:#e5edfa;
+  --shadow:0 1px 2px rgba(18,33,59,.05),0 6px 18px rgba(18,33,59,.06);
+  /* IIMA node palette */
+  --nb-context:#123a6b;  --nb-context-fg:#ffffff;   /* navy root/framing */
+  --nb-segment:#c7dcf3;  --nb-segment-fg:#0f2f57;   /* light blue branch */
+  --nb-decision:#2668b8; --nb-decision-fg:#ffffff;  /* blue chosen path */
+  --nb-option:#d9dde4;   --nb-option-fg:#243043;    /* grey option */
+  --nb-metric:#f4d38a;   --nb-metric-fg:#5a4211;    /* amber metric */
+  --nb-risk:#f2b7ae;     --nb-risk-fg:#6d211a;      /* red risk */
+  --wire:#9fb0c9;
+  --hl:#ffb703; --hl-soft:#fff4d6;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+html[data-theme="dark"]{
+  --bg:#0f141c; --panel:#161c26; --panel-2:#1c232f; --ink:#e6ebf3; --ink-2:#a9b4c6;
+  --ink-3:#6d7788; --line:#26303d; --line-2:#354150; --accent:#5b9bf0; --accent-soft:#16273f;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.3);
+  --nb-context:#1d4e8f;  --nb-context-fg:#eaf1fb;
+  --nb-segment:#284a70;  --nb-segment-fg:#d6e6fb;
+  --nb-decision:#357ad6; --nb-decision-fg:#ffffff;
+  --nb-option:#333d4c;   --nb-option-fg:#cfd7e3;
+  --nb-metric:#6a531f;   --nb-metric-fg:#f6dfa6;
+  --nb-risk:#6f342c;     --nb-risk-fg:#f4c1b8;
+  --wire:#41546d;
+  --hl:#ffc23c; --hl-soft:#2f2712;
+}
+*{box-sizing:border-box}
+body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--ink);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:none}
+h1,h2,h3,h4{margin:0;font-weight:660;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;
+  padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand b{font-size:14.5px;letter-spacing:-.015em;white-space:nowrap}
+.brand span{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.search{position:relative}
+.search input{width:200px;padding:7px 10px 7px 30px;border:1px solid var(--line-2);border-radius:8px;
+  background:var(--panel-2);color:var(--ink);font-size:13px;outline:none}
+.search input:focus{border-color:var(--accent)}
+.search svg{position:absolute;left:9px;top:8px;opacity:.45}
+.tbtn{padding:7px 11px;border:1px solid var(--line-2);border-radius:8px;background:var(--panel-2);
+  font-size:12.5px;font-weight:560;white-space:nowrap}
+.tbtn:hover{border-color:var(--accent);color:var(--accent)}
+.hamb{display:none}
+
+.wrap{display:grid;grid-template-columns:300px minmax(0,1fr);max-width:100%;overflow-x:clip;
+  min-height:calc(100vh - 52px);transition:grid-template-columns .18s}
+.wrap.sidecol{grid-template-columns:0 1fr}
+.wrap.sidecol .side{display:none}
+.wrap.nosidebar{grid-template-columns:1fr}
+.wrap.nosidebar .side{display:none}
+.reopenSide{position:fixed;left:6px;top:64px;z-index:40;width:26px;height:38px;border-radius:0 9px 9px 0;
+  background:var(--panel);border:1px solid var(--line);border-left:none;box-shadow:var(--shadow);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink-2)}
+.reopenSide:hover{color:var(--accent)}
+.side{border-right:1px solid var(--line);background:var(--panel);padding:12px 11px 40px;
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+.side h4{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);
+  margin:15px 6px 8px;display:flex;align-items:center;gap:6px}
+.side h4:first-child{margin-top:2px}
+.side h4 .clr{margin-left:auto;font-size:10px;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0}
+
+.fgroup{margin:0 3px 4px}
+.fglabel{font-size:10.5px;color:var(--ink-3);font-weight:600;margin:8px 4px 5px}
+.fchips{display:flex;flex-wrap:wrap;gap:5px}
+.fchip{font-size:11px;padding:3px 8px;border-radius:20px;border:1px solid var(--line-2);
+  background:var(--panel-2);color:var(--ink-2);line-height:1.3}
+.fchip:hover{border-color:var(--accent)}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:560}
+.fchip .n{font-family:var(--mono);opacity:.6;font-size:9.5px;margin-left:3px;font-variant-numeric:tabular-nums}
+.fchip.on .n{opacity:.85}
+.usearch-wrap{position:relative;margin:2px 3px 12px}
+.usearch-box{display:flex;align-items:center;flex-wrap:wrap;gap:5px;min-height:36px;padding:6px 9px;
+  border:1.5px solid var(--line-2);border-radius:10px;background:var(--panel-2);cursor:text;transition:border-color .15s}
+.usearch-box:hover{border-color:var(--ink-3)}
+.usearch-box.open{border-color:var(--accent)}
+.usearch-box svg{flex:none;opacity:.5}
+.usearch-tokens{display:flex;flex-wrap:wrap;gap:4px}
+.utoken{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:3px 4px 3px 9px;
+  border-radius:20px;background:var(--accent);color:#fff;white-space:nowrap}
+.utoken button{background:none;border:none;color:#fff;opacity:.75;cursor:pointer;font-size:14px;line-height:1;padding:1px 4px}
+.utoken button:hover{opacity:1}
+.usearch-box input{flex:1;min-width:64px;border:none;outline:none;background:transparent;color:var(--ink);font-size:13px}
+.usearch-clear{flex:none;border:none;background:none;color:var(--ink-3);cursor:pointer;font-size:16px;padding:0 2px;border-radius:5px;line-height:1}
+.usearch-clear:hover{color:var(--ink);background:var(--line)}
+.usearch-dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;background:var(--panel);
+  border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);max-height:min(380px,62vh);overflow:auto;
+  padding:9px;opacity:0;transform:translateY(-5px);pointer-events:none;transition:opacity .14s ease,transform .14s ease}
+.usearch-dropdown.open{opacity:1;transform:translateY(0);pointer-events:auto}
+.sgroup{margin-bottom:7px}
+.sgroup:last-child{margin-bottom:0}
+.sgrouplbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:650;padding:4px 7px 3px}
+.srow{display:flex;align-items:center;width:100%;gap:8px;padding:6px 7px;border-radius:7px;border:none;
+  background:none;text-align:left;cursor:pointer;font-size:12.5px;color:var(--ink-2);transition:background .1s}
+.srow:hover{background:var(--panel-2);color:var(--ink)}
+.srow.on{color:var(--ink);font-weight:600}
+.srow-check{flex:none;width:13px;font-size:11px;color:var(--accent);font-weight:700}
+.srow-label{flex:1}
+.srow-n{flex:none;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.usearch-empty{padding:10px 6px;color:var(--ink-3);font-size:12px;font-style:italic}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+#main{animation:fadeUp .16s ease}
+
+.citem{display:block;width:100%;text-align:left;padding:8px 9px;border:1px solid transparent;
+  border-radius:9px;margin-bottom:3px}
+.citem:hover{background:var(--panel-2);border-color:var(--line)}
+.citem.on{background:var(--accent-soft);border-color:var(--accent)}
+.citem .r1{display:flex;align-items:baseline;gap:7px}
+.citem .num{font:650 10px/1 var(--mono);color:var(--ink-3);min-width:20px;padding-top:2px;font-variant-numeric:tabular-nums}
+.citem.on .num{color:var(--accent)}
+.citem .ttl{font-size:13px;font-weight:570;line-height:1.32;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden}
+.citem .sub{font-size:10.5px;color:var(--ink-3);margin:3px 0 0 27px;display:-webkit-box;
+  -webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--nb-decision);flex:none;margin-top:5px}
+.dot.off{background:var(--line-2)}
+.emptside{color:var(--ink-3);font-size:12.5px;font-style:italic;padding:8px}
+
+.main{padding:20px 26px 90px;max-width:1280px;min-width:0}
+.kicker{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);
+  font-weight:680;margin-bottom:5px}
+.chead h1{font-size:24px;line-height:1.18;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--panel);
+  border:1px solid var(--line-2);color:var(--ink-2)}
+.chip.k{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:560}
+.chip.warn{background:var(--nb-risk);border-color:var(--nb-risk);color:var(--nb-risk-fg)}
+.prompt{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:13px 16px;box-shadow:var(--shadow)}
+.prompt .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);
+  font-weight:680;margin-bottom:4px}
+.prompt p{margin:0;font-size:15px;line-height:1.5}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:18px 0 16px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 13px;font-size:13px;font-weight:550;color:var(--ink-2);border-bottom:2px solid transparent;
+  margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:640}
+.tab .cnt{font:650 10px/1 var(--mono);color:var(--ink-3)}
+.tab.pll{margin-left:auto;color:var(--ink-3)}
+
+/* ---- IIMA tree ---- */
+.treewrap{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);overflow:hidden}
+.treebar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 11px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.mini{font-size:11.5px;padding:4px 9px;border:1px solid var(--line-2);border-radius:7px;background:var(--panel);font-weight:550}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+.mini.warnb{border-color:var(--nb-risk);color:var(--nb-risk-fg)}
+.seg{display:flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden}
+.seg button{padding:4px 10px;font-size:11.5px;font-weight:560;background:var(--panel)}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:hover:not(.on){color:var(--accent)}
+.zoom{display:flex;align-items:center;gap:4px;margin-left:auto}
+.zoom button{width:26px;height:26px;border:1px solid var(--line-2);border-radius:6px;background:var(--panel);
+  font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center}
+.zoom button:hover{border-color:var(--accent);color:var(--accent)}
+.zlvl{font:600 11px/1 var(--mono);color:var(--ink-3);min-width:34px;text-align:center;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:5px}
+.lg{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:680;letter-spacing:.02em;cursor:pointer;user-select:none;border:1px solid transparent}
+.lg.mut{opacity:.3}
+
+.treeport{position:relative;overflow:hidden;cursor:grab;touch-action:none;min-height:280px;
+  background:radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/22px 22px}
+.treeport.grabbing{cursor:grabbing}
+.treewrap .treeport{height:min(66vh,620px)}
+.treeport .tpempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--ink-3);font-size:13px;font-style:italic;text-align:center;padding:20px}
+.treecanvas{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.nb{position:absolute;width:172px;border-radius:6px;padding:8px 10px;font-size:12.3px;line-height:1.32;
+  font-weight:560;cursor:pointer;border:1.5px solid transparent;transition:box-shadow .12s,opacity .18s,transform .12s;
+  box-shadow:0 1px 2px rgba(18,33,59,.12)}
+.nb .nval{display:block;font-weight:700;font-size:11.5px;margin-top:4px;font-family:var(--mono);
+  font-variant-numeric:tabular-nums}
+.nb.context{background:var(--nb-context);color:var(--nb-context-fg)}
+.nb.segment{background:var(--nb-segment);color:var(--nb-segment-fg)}
+.nb.decision{background:var(--nb-decision);color:var(--nb-decision-fg)}
+.nb.option{background:var(--nb-option);color:var(--nb-option-fg)}
+.nb.metric{background:var(--nb-metric);color:var(--nb-metric-fg)}
+.nb.risk{background:var(--nb-risk);color:var(--nb-risk-fg)}
+.nb.ghost{opacity:.24;filter:saturate(.4)}
+.nb.result{box-shadow:0 0 0 2px var(--nb-context) inset,0 1px 2px rgba(18,33,59,.12)}
+.nb.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),0 2px 8px rgba(18,33,59,.2)}
+.nb.hot{border-color:var(--hl);box-shadow:0 0 0 3px var(--hl-soft),0 3px 10px rgba(0,0,0,.18)}
+.nb .car{position:absolute;right:-9px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;
+  background:var(--panel);border:1.5px solid var(--wire);color:var(--ink-2);font-size:11px;display:flex;
+  align-items:center;justify-content:center;z-index:3}
+.nb .car:hover{border-color:var(--accent);color:var(--accent)}
+.opchip{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--panel);
+  border:1.5px solid var(--wire);font:700 11px/1 var(--mono);display:flex;align-items:center;
+  justify-content:center;color:var(--ink-2);z-index:3}
+.wires{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.wires path{fill:none;stroke:var(--wire);stroke-width:1.6}
+.wires path.hot{stroke:var(--hl);stroke-width:2.3}
+.thint{font-size:11.5px;color:var(--ink-3);padding:7px 12px;border-top:1px solid var(--line);background:var(--panel-2)}
+
+/* node detail */
+.ndetail{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);
+  padding:13px 15px;margin-top:13px}
+.ndetail .dt{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.ndetail .dt .pill{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2.5px 7px;border-radius:5px}
+.ndetail h3{font-size:15px;line-height:1.3}
+.ndetail p.d{margin:6px 0 0;font-size:13.6px;line-height:1.55;color:var(--ink-2)}
+.ndetail .quotes{margin-top:10px;border-top:1px dashed var(--line-2);padding-top:9px}
+.ndetail .quotes .ql{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:680;margin-bottom:6px}
+.qref{font-size:12.8px;line-height:1.5;padding:5px 0 5px 11px;border-left:2px solid var(--line-2);margin-bottom:5px;color:var(--ink-2)}
+.qref b{color:var(--accent);font-weight:640}
+.ndetail .hintclick{color:var(--ink-3);font-size:12px;font-style:italic}
+
+/* ---- study / guided replay: 3 resizable + collapsible panes ---- */
+.studyWrap{display:flex;flex-direction:column}
+.studyRow{display:flex;align-items:stretch;min-height:260px}
+.pane{overflow:auto;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:11px}
+.pL,.pR{display:flex;flex-direction:column;flex:0 0 auto}
+.pC{flex:1 1 auto;min-width:360px;display:flex;flex-direction:column;overflow:hidden}
+.pC .treebar{flex:0 0 auto;border-radius:11px 11px 0 0}
+.pC .treeport{flex:1 1 auto;min-height:0;height:auto}
+.pC .thint{flex:0 0 auto;border-radius:0 0 11px 11px}
+.pane.rail{flex:0 0 30px!important;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pane.rail:hover{border-color:var(--accent)}
+.pane.rail .railtxt{writing-mode:vertical-rl;font-size:11px;font-weight:650;letter-spacing:.06em;
+  color:var(--ink-2);text-transform:uppercase;white-space:nowrap}
+.paneHead{padding:9px 11px;border-bottom:1px solid var(--line);background:var(--panel-2);
+  display:flex;align-items:center;gap:8px;border-radius:11px 11px 0 0;flex:0 0 auto}
+.paneHead b{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);white-space:nowrap}
+.paneHead .progress{flex:1;min-width:40px}
+.collapseBtn{margin-left:auto;width:24px;height:24px;padding:0;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line-2);border-radius:6px;background:var(--panel);flex:none}
+.collapseBtn:hover{border-color:var(--accent);color:var(--accent)}
+.gutter{flex:0 0 10px;position:relative;background:transparent}
+.gutter::after{content:"";position:absolute;background:var(--line-2);border-radius:2px;transition:background .12s}
+.gv::after{left:4px;right:4px;top:8px;bottom:8px;width:2px;margin:0 auto}
+.gv{cursor:col-resize}
+.gh{height:10px;cursor:row-resize}
+.gh::after{top:4px;bottom:4px;left:8px;right:8px;height:2px;margin:auto 0}
+.gutter:hover::after,.gutter.active::after{background:var(--accent)}
+.progress{height:5px;border-radius:3px;background:var(--line);overflow:hidden;min-width:60px}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.scbody{flex:1 1 auto;overflow-y:auto;padding:6px 6px 10px}
+.turn{display:grid;grid-template-columns:74px minmax(0,1fr);gap:10px;padding:9px 9px;border-radius:8px;cursor:pointer;margin:2px 0}
+.turn:hover{background:var(--panel-2)}
+.turn.cur{background:var(--hl-soft);outline:1px solid var(--hl)}
+.turn.past{opacity:1}
+.turn.future{opacity:.42}
+.who{font-size:9.5px;font-weight:750;text-transform:uppercase;letter-spacing:.06em;padding-top:3px}
+.who.i{color:var(--accent)}
+.who.c{color:#1a7f52}
+.turn>div{min-width:0}
+.turn p{margin:0;font-size:13.4px;line-height:1.5;overflow-wrap:break-word}
+.turn .tnodes{margin-top:4px;display:flex;flex-wrap:wrap;gap:3px}
+.tnode{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:1.5px 5px;border-radius:4px}
+.rctrl{display:flex;align-items:center;gap:7px;padding:9px 13px;border-top:1px solid var(--line);background:var(--panel-2);
+  border-radius:0 0 11px 11px;flex-wrap:wrap;flex:0 0 auto}
+.rbtn{padding:6px 11px;border:1px solid var(--line-2);border-radius:7px;background:var(--panel);font-size:12.5px;font-weight:560}
+.rbtn:hover{border-color:var(--accent);color:var(--accent)}
+.rbtn.play{background:var(--accent);border-color:var(--accent);color:#fff}
+.rstep{font:600 11.5px/1 var(--mono);color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* cards / framework / qa */
+.agrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:14px}
+.card h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.card h3 .bar{width:3px;height:12px;border-radius:2px;background:var(--accent)}
+.card ul{margin:0;padding-left:17px}.card li{margin-bottom:7px;font-size:13.5px;line-height:1.5}.card li:last-child{margin-bottom:0}
+.fwrow{display:grid;grid-template-columns:150px 1fr 1fr;gap:0;border-top:1px solid var(--line)}
+.fwrow.h{border-top:none}
+.fwrow.h div{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:700;padding:6px 10px}
+.fwrow>div{padding:10px;font-size:13px;line-height:1.5;border-left:1px solid var(--line)}
+.fwrow>div:first-child{border-left:none;font-weight:620;color:var(--ink);background:var(--panel-2)}
+.fwrow .gen{color:var(--ink-2)}
+.qa{padding:10px 0;border-bottom:1px solid var(--line)}.qa:last-child{border-bottom:none}
+.qa .q{font-size:13.8px;font-weight:570;margin:0 0 5px}.qa .a{font-size:13.2px;color:var(--ink-2);margin:0;padding-left:12px;border-left:2px solid var(--line-2)}
+.pb .q{color:var(--nb-risk-fg)}
+.empty{color:var(--ink-3);font-size:13px;font-style:italic;padding:6px 0}
+.note{font-size:12.4px;line-height:1.55;color:var(--ink-2);background:var(--hl-soft);border:1px solid var(--hl);border-radius:9px;padding:10px 13px;margin-bottom:14px}
+.note.warn{background:var(--nb-risk);border-color:var(--nb-risk);color:var(--nb-risk-fg)}
+.note.warn b{color:var(--nb-risk-fg)}
+.foot{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.nav{display:flex;gap:8px;margin-top:22px}
+.fw-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px;box-shadow:var(--shadow)}
+.step .n{font:750 10.5px/1 var(--mono);color:var(--accent);margin-bottom:6px}
+.step b{display:block;font-size:14px;margin-bottom:5px}.step p{margin:0;font-size:12.7px;line-height:1.5;color:var(--ink-2)}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important}
+}
+
+@media(max-width:1120px){.agrid{grid-template-columns:1fr}}
+@media(max-width:900px){
+  .studyRow{flex-direction:column;height:auto!important}
+  .studyRow .gutter.gv{display:none}
+  .gutter.gh{display:none}
+  .pane.pL,.pane.pR,.pane.pC{flex:none!important;width:100%}
+  .pC{min-width:0;height:60vh}
+  .pane.rail .railtxt{writing-mode:horizontal-tb}
+  .pane.rail{flex:0 0 40px!important}
+}
+@media(max-width:860px){
+  .wrap{grid-template-columns:1fr}
+  .side{position:fixed;left:0;top:52px;width:min(310px,88vw);z-index:45;transform:translateX(-102%);transition:transform .2s;box-shadow:var(--shadow)}
+  .side.open{transform:none}
+  .hamb{display:flex}
+  #sideToggle,.reopenSide{display:none}
+  .main{padding:16px 13px 80px}
+  .topbar{gap:8px;padding:9px 11px}.search{flex:1;min-width:0}.search input{width:100%}
+  .brand{display:none}
+  .fwrow{grid-template-columns:1fr}.fwrow>div{border-left:none}
+  .chead h1{font-size:20px}
+}
+
+/* ---------------- discipline hub ---------------- */
+.hub{max-width:1080px;margin:0 auto;padding:8px 8px 60px;animation:fadeUp .3s ease}
+.hhero{max-width:1080px;margin:0 auto;padding:48px 16px 8px;text-align:center}
+.hkicker{font-size:12px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hhero h1{font-size:34px;letter-spacing:-.02em}
+.hhero p{max-width:560px;margin:14px auto 0;color:var(--ink-2);font-size:15px}
+.hstats{display:flex;gap:26px;justify-content:center;margin:30px 0 10px;flex-wrap:wrap}
+.hstat b{display:block;font-size:24px;letter-spacing:-.02em}
+.hstat span{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+.hgrid{margin-top:30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.hcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;gap:13px;text-align:left;width:100%;
+  transition:transform .16s ease,border-color .16s ease}
+.hcard:not(.soon):hover{transform:translateY(-3px);border-color:var(--accent)}
+.hcard.soon{opacity:.55;cursor:default}
+.htop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.hico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);color:var(--accent);flex:none}
+.hico svg{width:21px;height:21px}
+.hbadge{font-size:10.5px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;padding:4px 8px;
+  border-radius:999px;background:var(--panel-2);color:var(--ink-3);border:1px solid var(--line)}
+.hbadge.soon{background:var(--nb-metric);color:var(--nb-metric-fg);border-color:transparent}
+.hcard h3{font-size:18px}
+.hcard p{margin:0;color:var(--ink-2);font-size:13.4px;line-height:1.5}
+.hchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.hfoot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:12px;border-top:1px solid var(--line)}
+.hn{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.hn small{font-size:11px;font-weight:560;color:var(--ink-3);text-transform:uppercase;margin-left:5px}
+.hgo{font-size:12.5px;font-weight:650;color:var(--accent)}
+@media(max-width:600px){.hhero h1{font-size:26px}.hstats{gap:16px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="tbtn hamb" id="hamb">☰</button>
+  <button class="tbtn" id="sideToggle" title="Collapse sidebar" aria-expanded="true" aria-controls="side">⟨ Sidebar</button>
+  <button class="tbtn" id="toHub" title="All disciplines" style="display:none">⌂ All disciplines</button>
+  <div class="brand"><b>Casebook Studio</b>
+    <span id="subtitle"></span></div>
+  <div class="spacer"></div>
+  <button class="tbtn" id="theme" title="Light / dark" style="min-width:38px">◐</button>
+</div>
+<div class="wrap">
+  <nav class="side" id="side"></nav>
+  <main class="main" id="main"></main>
+</div>
+<script>
+const DATA = {"title": "Casebook Studio", "subtitle": "Interview cases as click-through decision trees. Public demo: 3 original cases.", "disciplines": [{"key": "pm", "label": "Product Management", "source": "demo", "discipline": "Product Management", "subtitle": "3 demo cases written for this portfolio. The full library is private.", "intro": {"id": "pm_overview", "page_range": "-", "title": "Product Management: case methods", "definition": "Each case is a decision tree you click through: clarify, structure, decide, defend.", "steps": [{"step": "Product Design", "detail": "Design or improve a product for a chosen user."}, {"step": "Root Cause Analysis", "detail": "Find why a metric moved before fixing it."}, {"step": "Guesstimate", "detail": "Estimate a number from defensible assumptions."}]}, "cases": [{"id": "demo_pd_stale_applications", "source": "Original demo case, written for this portfolio", "page_range": "-", "title": "Stale Job Applications", "company": "Not specified (fictional)", "industry": "Consumer / Careers", "prompt": "Job seekers on our app apply to dozens of roles and then lose track of them. Design a feature that helps.", "clarifying_questions": [{"q": "Who are our users: students, early-career, or senior professionals?", "a": "Mostly people with 1 to 6 years of experience switching jobs."}, {"q": "What does the business care about: retention, or something like placements?", "a": "Retention first. People churn once their search goes quiet."}, {"q": "Do we see their applications today?", "a": "Only the ones they apply to through us. Most applications happen elsewhere."}], "framework_used": "Product design: user, pain, solutions, prioritise, measure", "decision_tree": [{"id": "n1", "parent": null, "label": "Help job seekers keep track of applications", "detail": "Retention problem: users churn when their search goes quiet and messy.", "type": "context", "turn_refs": [0]}, {"id": "n2", "parent": "n1", "label": "Scope", "detail": "Switchers with 1 to 6 years of experience; retention is the goal; we only see in-app applications.", "type": "context", "turn_refs": [1, 2, 3, 4]}, {"id": "n3", "parent": "n1", "label": "Segments", "detail": "Who loses track, and why.", "type": "segment", "turn_refs": [5]}, {"id": "n4", "parent": "n3", "label": "High-volume appliers", "detail": "Apply to 30+ roles, mostly one-click; can't recall which CV went where.", "type": "segment", "turn_refs": [5]}, {"id": "n5", "parent": "n3", "label": "Referral-led searchers", "detail": "Fewer applications, more people involved; lose track of who promised what.", "type": "segment", "turn_refs": [5]}, {"id": "n6", "parent": "n3", "label": "Target: high-volume appliers", "detail": "Biggest group, and the one whose search goes stale fastest.", "type": "decision", "turn_refs": [6]}, {"id": "n7", "parent": "n6", "label": "Pain: applications live outside our app", "detail": "Confirmation emails are the only complete record.", "type": "context", "turn_refs": [7]}, {"id": "n8", "parent": "n6", "label": "Pain: no signal on when to follow up", "detail": "Silence after applying is ambiguous: still in review, or rejected?", "type": "context", "turn_refs": [7]}, {"id": "n9", "parent": "n6", "label": "Option: import from email", "detail": "Read application confirmations from the user's inbox, with consent, to build the list automatically.", "type": "option", "turn_refs": [8]}, {"id": "n10", "parent": "n6", "label": "Option: follow-up nudges", "detail": "Nudge at 7 days of silence, suggest closing at 21.", "type": "option", "turn_refs": [8]}, {"id": "n11", "parent": "n6", "label": "Option: CV-per-application log", "detail": "Record which CV version each application used; show which converts.", "type": "option", "turn_refs": [8]}, {"id": "n12", "parent": "n6", "label": "Prioritise by value and effort", "detail": "Email import unlocks the other two but needs trust and consent work.", "type": "decision", "turn_refs": [9, 10]}, {"id": "n13", "parent": "n12", "label": "Ship nudges and CV log first, email import as a beta", "detail": "Quick wins on in-app data now; test consent appetite with an opt-in beta.", "type": "decision", "turn_refs": [10], "result": true}, {"id": "n14", "parent": "n1", "label": "Success metrics", "detail": "Did the search stay alive?", "type": "metric", "turn_refs": [11]}, {"id": "n15", "parent": "n14", "label": "Weekly active searchers; follow-ups sent per user", "detail": "Leading signals of an active search.", "type": "metric", "turn_refs": [11]}, {"id": "n16", "parent": "n1", "label": "Risk: inbox access feels invasive", "detail": "Read only application emails, show what was read, and make it one-tap to disconnect.", "type": "risk", "turn_refs": [12]}], "recommendation": ["Target high-volume appliers: the largest group and the one whose search goes stale fastest.", "Ship follow-up nudges and a CV-per-application log on in-app data first; run email import as an opt-in beta.", "Measure weekly active searchers and follow-ups sent, with uninstall rate after inbox consent as a guardrail."], "metrics": ["Weekly active searchers", "Follow-ups sent per user", "Share of applications with a logged outcome", "Guardrail: disconnects and uninstalls after granting inbox access"], "risks": ["Inbox access is a trust jump; a bad first impression can sink the whole feature.", "Nudges that fire too often become noise; cap them and let users snooze."], "interviewer_pushbacks": [{"pushback": "Email import is the most powerful idea. Why not lead with it?", "handling": "It is, but it depends on users trusting us with their inbox. Shipping value on our own data first earns that trust and tells us who would opt in."}, {"pushback": "How do you know nudges at 7 and 21 days are right?", "handling": "They're starting guesses. I'd test the timing against reply rates and adjust."}], "transcript": [{"speaker": "Interviewer", "text": "Job seekers on our app apply to dozens of roles and then lose track of them. Design a feature that helps."}, {"speaker": "Candidate", "text": "Who are the users, and what does the business want: retention or placements?"}, {"speaker": "Interviewer", "text": "Mostly switchers with 1 to 6 years of experience. Retention first, because people churn when their search goes quiet."}, {"speaker": "Candidate", "text": "Do we see all their applications?"}, {"speaker": "Interviewer", "text": "Only the ones made through us. Most happen elsewhere."}, {"speaker": "Candidate", "text": "Two segments lose track: high-volume appliers who one-click 30+ roles and can't recall which CV went where, and referral-led searchers juggling people more than postings."}, {"speaker": "Candidate", "text": "I'll focus on high-volume appliers. They're the biggest group and their search goes stale fastest."}, {"speaker": "Candidate", "text": "Their pains: the full record lives in confirmation emails, not in our app, and silence after applying gives no signal on when to follow up."}, {"speaker": "Candidate", "text": "Options: import applications from email with consent; nudge at 7 days of silence and suggest closing at 21; and log which CV each application used so users see what converts."}, {"speaker": "Interviewer", "text": "How would you prioritise?"}, {"speaker": "Candidate", "text": "Email import unlocks the rest but needs trust. So I'd ship nudges and the CV log on in-app data now, and run email import as an opt-in beta."}, {"speaker": "Candidate", "text": "Success is weekly active searchers and follow-ups sent per user."}, {"speaker": "Candidate", "text": "The main risk is that inbox access feels invasive, so I'd read only application emails, show exactly what was read, and make disconnecting one tap."}], "key_takeaway": "Sequence by trust, not by power. The strongest feature waits until cheaper ones have earned the user's permission.", "extraction_notes": "Written for this demo; inspired by the problem behind Switch Board.", "facets": {"case_type": "Product Design", "industry": "Consumer / Careers", "geography": "India", "emphasis": ["Segmentation/Targeting", "Prioritization", "Trust/Privacy"], "moves": ["Feature design"], "difficulty": "Intermediate", "product_form": "Digital"}, "subtopics": ["Segment by behaviour", "Sequencing by trust", "Consent design", "Leading metrics"], "framework_mapping": [{"stage": "Scope", "generic": "Clarify the user and the goal.", "specific": "Switchers, retention."}, {"stage": "Segment", "generic": "Choose whom to serve.", "specific": "High-volume appliers."}, {"stage": "Pains", "generic": "Name the needs.", "specific": "Record lives in email; no follow-up signal."}, {"stage": "Solutions", "generic": "Generate options per pain.", "specific": "Email import, nudges, CV log."}, {"stage": "Prioritise and measure", "generic": "Rank, then define success.", "specific": "Nudges and CV log first; weekly active searchers."}]}, {"id": "demo_rca_upi_success_drop", "source": "Original demo case, written for this portfolio", "page_range": "-", "title": "UPI Payment Success Rate Drop", "company": "Not specified (fictional)", "industry": "Fintech / Payments", "prompt": "UPI payment success rate on our app fell from 94% to 88% over the last week. Find out why.", "clarifying_questions": [{"q": "How is success rate defined: completed payments over initiated, or over attempts reaching the bank?", "a": "Completed over initiated, measured in-app."}, {"q": "Was the drop sudden or gradual?", "a": "Sudden. It started on Tuesday afternoon."}, {"q": "Any releases, partner changes or outages that week?", "a": "We shipped app version 6.2 on Tuesday morning. Nothing else that we know of."}], "framework_used": "Root cause: clarify, split internal vs external, segment, isolate, validate", "decision_tree": [{"id": "n1", "parent": null, "label": "UPI success rate 94% to 88% in a week", "detail": "A six-point drop in a core payments metric. Treat it as an incident before a strategy question.", "type": "context", "turn_refs": [0]}, {"id": "n2", "parent": "n1", "label": "Clarify the metric and timing", "detail": "Completed over initiated, in-app. Sudden onset on Tuesday afternoon, same day as release 6.2.", "type": "context", "turn_refs": [1, 2, 3, 4]}, {"id": "n3", "parent": "n1", "label": "External causes", "detail": "Check what we do not control before blaming our own release.", "type": "segment", "turn_refs": [5]}, {"id": "n4", "parent": "n3", "label": "Bank or PSP downtime", "detail": "NPCI and partner bank status, failure codes from the switch.", "type": "option", "turn_refs": [5, 6]}, {"id": "n5", "parent": "n3", "label": "Seasonality or demand mix", "detail": "Festive spikes or a promo pulling in new, less reliable payers.", "type": "option", "turn_refs": [5, 6]}, {"id": "n6", "parent": "n1", "label": "Internal causes", "detail": "Things we changed: release 6.2, backend config, risk rules.", "type": "segment", "turn_refs": [5]}, {"id": "n7", "parent": "n6", "label": "Segment the drop", "detail": "Cut by app version, OS, bank, amount band and new vs returning users.", "type": "decision", "turn_refs": [7, 8]}, {"id": "n8", "parent": "n7", "label": "Only version 6.2 on Android drops", "detail": "iOS and older Android versions hold at 94%. The drop lives in one build.", "type": "metric", "turn_refs": [8], "value": "6.2 Android: 81%"}, {"id": "n9", "parent": "n8", "label": "Funnel inside 6.2", "detail": "Initiated, PIN screen shown, PIN entered, bank response, success screen.", "type": "decision", "turn_refs": [9]}, {"id": "n10", "parent": "n9", "label": "Users drop at the PIN screen", "detail": "PIN-screen-shown to PIN-entered fell sharply; bank responses look normal.", "type": "metric", "turn_refs": [10], "value": "PIN entry -9 pts"}, {"id": "n11", "parent": "n10", "label": "Hypothesis: new PIN screen breaks on some keyboards", "detail": "6.2 redesigned the PIN entry. Third-party keyboards may not open the numeric pad.", "type": "decision", "turn_refs": [11]}, {"id": "n12", "parent": "n11", "label": "Validate with session data and a repro", "detail": "Check device and keyboard logs, reproduce on two popular keyboards, read support tickets.", "type": "decision", "turn_refs": [12]}, {"id": "n13", "parent": "n1", "label": "Recommendation", "detail": "Roll back the PIN screen behind a flag today; fix and re-release with keyboard coverage tests.", "type": "decision", "turn_refs": [13], "result": true}, {"id": "n14", "parent": "n13", "label": "Watch: success rate by version, hourly", "detail": "Confirms the rollback worked and catches a repeat.", "type": "metric", "turn_refs": [13]}, {"id": "n15", "parent": "n13", "label": "Risk: lost trust from failed payments", "detail": "Users who failed may switch apps. Consider a nudge or cashback for affected users.", "type": "risk", "turn_refs": [13]}], "recommendation": ["Roll back the redesigned PIN screen behind a feature flag today; that recovers most of the drop if the hypothesis holds.", "Fix keyboard handling, add device and keyboard coverage to release testing, and re-release with a staged rollout.", "Reach out to users who failed a payment this week, since a failed payment costs more trust than a slow one."], "metrics": ["Payment success rate by app version and OS, hourly", "PIN-screen-shown to PIN-entered conversion", "Repeat payment rate of users who failed this week"], "risks": ["The keyboard hypothesis may only explain part of the drop; keep checking bank failure codes in parallel.", "A rollback can reintroduce whatever the redesign fixed; check what 6.2 was meant to solve."], "interviewer_pushbacks": [{"pushback": "Why not start with the banks? Bank downtime is the usual cause.", "handling": "Ruled it out quickly with data: the drop is confined to one app build, and bank responses are normal. Segmenting first saved chasing the wrong cause."}, {"pushback": "Would you roll back without being sure?", "handling": "Yes, behind a flag. A payments failure is expensive for users, and a flag makes the rollback cheap to reverse."}], "transcript": [{"speaker": "Interviewer", "text": "UPI payment success rate on our app fell from 94% to 88% over the last week. Find out why."}, {"speaker": "Candidate", "text": "First, how do we define success rate: completed over initiated, or over requests that reached the bank?"}, {"speaker": "Interviewer", "text": "Completed over initiated, measured in-app."}, {"speaker": "Candidate", "text": "Was it sudden or gradual, and did anything change that week: a release, a partner, an outage?"}, {"speaker": "Interviewer", "text": "Sudden, from Tuesday afternoon. We shipped app version 6.2 on Tuesday morning."}, {"speaker": "Candidate", "text": "I'll split causes into external, like bank or PSP downtime and demand mix, and internal, like our release, config or risk rules. The timing points inside, but I want data to rule the banks out."}, {"speaker": "Interviewer", "text": "Bank status pages were green and failure codes from the switch look normal."}, {"speaker": "Candidate", "text": "Then I'd segment the drop by app version, OS, bank, amount band and new versus returning users."}, {"speaker": "Interviewer", "text": "Only version 6.2 on Android is down, at about 81%. iOS and older Android builds are still at 94%."}, {"speaker": "Candidate", "text": "Inside 6.2, I'd walk the funnel: payment initiated, PIN screen shown, PIN entered, bank response, success screen."}, {"speaker": "Interviewer", "text": "The big fall is between PIN screen shown and PIN entered."}, {"speaker": "Candidate", "text": "6.2 redesigned the PIN screen. My hypothesis is that on some third-party keyboards the numeric pad doesn't open, so users give up."}, {"speaker": "Candidate", "text": "I'd validate with device and keyboard logs, reproduce it on the two most common keyboards, and read support tickets from this week."}, {"speaker": "Candidate", "text": "Recommendation: roll back the PIN screen behind a flag today, fix it with keyboard coverage tests, re-release in stages, and watch success rate by version hourly. I'd also reach out to users who failed a payment."}], "key_takeaway": "Segment before you theorise. One cut by app version turned a vague six-point drop into a single broken screen.", "extraction_notes": "Written for this demo. Numbers are illustrative.", "facets": {"case_type": "Root Cause Analysis", "industry": "Fintech / Payments", "geography": "India", "emphasis": ["Metrics/Measurement", "Funnel analysis"], "moves": ["Incident diagnosis"], "difficulty": "Foundational", "product_form": "Digital"}, "subtopics": ["Internal vs external split", "Segment by version", "Funnel isolation", "Rollback behind a flag"], "framework_mapping": [{"stage": "Clarify", "generic": "Pin down the metric definition and the timeline.", "specific": "Completed over initiated; sudden drop on release day."}, {"stage": "Internal vs external", "generic": "List causes you control and causes you don't.", "specific": "Banks and demand mix vs release 6.2 and config."}, {"stage": "Segment", "generic": "Cut the metric until the drop concentrates.", "specific": "Only 6.2 on Android is down."}, {"stage": "Isolate", "generic": "Walk the funnel inside the affected segment.", "specific": "Drop sits at PIN entry."}, {"stage": "Validate and act", "generic": "Prove the cause, fix it, and set guardrails.", "specific": "Repro on keyboards, rollback behind a flag, hourly monitoring."}]}, {"id": "demo_gs_qcommerce_orders", "source": "Original demo case, written for this portfolio", "page_range": "-", "title": "Quick-Commerce Orders in Bengaluru", "company": "Not specified (fictional)", "industry": "Consumer / Quick commerce", "prompt": "Estimate how many quick-commerce grocery orders are placed in Bengaluru on a typical weekday.", "clarifying_questions": [{"q": "All quick-commerce apps combined, or one player?", "a": "All combined."}, {"q": "Groceries only, or everything these apps sell?", "a": "Everything they sell."}], "framework_used": "Guesstimate: population, segment, frequency, sanity check", "decision_tree": [{"id": "n1", "parent": null, "label": "Weekday quick-commerce orders, Bengaluru", "detail": "Demand-side estimate across all apps.", "type": "context", "turn_refs": [0]}, {"id": "n2", "parent": "n1", "label": "Scope: all apps, all categories", "detail": "Avoids double-counting debates between players.", "type": "context", "turn_refs": [1, 2]}, {"id": "n3", "parent": "n1", "label": "Households", "detail": "Assume about 1.4 crore people and 3.5 people per household.", "type": "metric", "turn_refs": [3], "value": "~40 lakh"}, {"id": "n4", "parent": "n3", "label": "Households in serviceable areas", "detail": "Assume 80% live within dark-store coverage.", "type": "metric", "turn_refs": [4], "value": "~32 lakh"}, {"id": "n5", "parent": "n4", "label": "Households that use quick commerce", "detail": "Assume 45% have ordered in the last month.", "type": "metric", "turn_refs": [4], "value": "~14.4 lakh"}, {"id": "n6", "parent": "n5", "label": "Segment by frequency", "detail": "Users differ hugely in how often they order.", "type": "segment", "turn_refs": [5]}, {"id": "n7", "parent": "n6", "label": "Heavy users: 30%, 4 orders a week", "detail": "~4.3 lakh households × 4 / 7 ≈ 2.5 lakh a day.", "type": "option", "turn_refs": [5], "value": "~2.5 lakh"}, {"id": "n8", "parent": "n6", "label": "Regular users: 40%, 1.5 a week", "detail": "~5.8 lakh × 1.5 / 7 ≈ 1.2 lakh a day.", "type": "option", "turn_refs": [5], "value": "~1.2 lakh"}, {"id": "n9", "parent": "n6", "label": "Occasional users: 30%, 2 a month", "detail": "~4.3 lakh × 2 / 30 ≈ 0.3 lakh a day.", "type": "option", "turn_refs": [5], "value": "~0.3 lakh"}, {"id": "n10", "parent": "n1", "label": "Total ≈ 4 lakh orders a weekday", "detail": "2.5 + 1.2 + 0.3 lakh. Weekdays run a little below weekends.", "type": "decision", "turn_refs": [6], "result": true, "value": "~4 lakh"}, {"id": "n11", "parent": "n10", "label": "Sanity check from supply", "detail": "At ~300 dark stores, that's ~1,300 orders per store per day, plausible for busy stores.", "type": "metric", "turn_refs": [7]}, {"id": "n12", "parent": "n10", "label": "Swing assumption: heavy-user share", "detail": "If 10 points of heavy users are really regular users, the total falls by about 13%.", "type": "risk", "turn_refs": [8]}], "recommendation": ["About 4 lakh quick-commerce orders on a typical weekday in Bengaluru, across all apps.", "The estimate is most sensitive to the share of heavy users; that's the assumption to test first."], "metrics": ["Orders per serviceable household per week", "Orders per dark store per day"], "risks": ["Every input is an assumption; the structure matters more than the number.", "Store-count sanity checks depend on how many stores are actually live."], "interviewer_pushbacks": [{"pushback": "Why segment by frequency instead of using one average?", "handling": "Quick commerce is driven by a heavy-user core. One average hides that and makes the estimate fragile."}], "transcript": [{"speaker": "Interviewer", "text": "Estimate how many quick-commerce grocery orders are placed in Bengaluru on a typical weekday."}, {"speaker": "Candidate", "text": "All apps combined, and everything they sell, not just groceries?"}, {"speaker": "Interviewer", "text": "Yes, all apps and all categories."}, {"speaker": "Candidate", "text": "I'll start from households. Assume about 1.4 crore people at 3.5 per household, so roughly 40 lakh households."}, {"speaker": "Candidate", "text": "Assume 80% are in serviceable areas, about 32 lakh, and 45% of those ordered in the last month, about 14.4 lakh households."}, {"speaker": "Candidate", "text": "Split by frequency: 30% heavy users at 4 orders a week give about 2.5 lakh a day; 40% regular users at 1.5 a week give about 1.2 lakh; 30% occasional users at 2 a month give about 0.3 lakh."}, {"speaker": "Candidate", "text": "That totals about 4 lakh orders on a weekday."}, {"speaker": "Candidate", "text": "Sanity check from supply: with around 300 dark stores, that's about 1,300 orders per store per day, which is plausible for busy stores."}, {"speaker": "Candidate", "text": "The swing assumption is the heavy-user share. If 10 points of heavy users are really regular users, the total falls by about 13%, so that's what I'd validate first."}], "key_takeaway": "Segment by behaviour, then sanity-check from the other side of the market.", "extraction_notes": "Written for this demo. All inputs are stated assumptions, not data.", "facets": {"case_type": "Guesstimate", "industry": "Consumer / Quick commerce", "geography": "India", "emphasis": ["Estimation", "Sanity checks"], "moves": ["Market sizing"], "difficulty": "Foundational", "product_form": "Digital + physical"}, "subtopics": ["Household base", "Frequency segments", "Supply-side sanity check", "Sensitivity"], "framework_mapping": [{"stage": "Base", "generic": "Start from a population you can defend.", "specific": "~40 lakh households."}, {"stage": "Filter", "generic": "Narrow to the addressable group.", "specific": "Serviceable and active: ~14.4 lakh."}, {"stage": "Frequency", "generic": "Segment by behaviour.", "specific": "Heavy, regular, occasional."}, {"stage": "Check", "generic": "Cross-check from another angle.", "specific": "Orders per dark store."}]}], "frameworks": [{"id": "fw_design", "name": "Product design", "source": "General method", "page": "", "when_to_use": "Design or improve product X.", "steps": ["Scope", "Segment", "Pains", "Solutions", "Prioritise", "Measure"]}, {"id": "fw_rca", "name": "Root cause", "source": "General method", "page": "", "when_to_use": "Metric X moved. Why?", "steps": ["Clarify", "Internal vs external", "Segment", "Isolate", "Validate", "Act"]}, {"id": "fw_guess", "name": "Guesstimate", "source": "General method", "page": "", "when_to_use": "How many X?", "steps": ["Base", "Filter", "Frequency", "Sanity check"]}], "coverage": {"built": 3, "flagged": 0, "by_type": {"Product Design": 1, "Root Cause Analysis": 1, "Guesstimate": 1}}}]};
+const MULTI = Array.isArray(DATA.disciplines);
+let cases=[], intro=null, frameworks=[], DISC="", COV=null;
+function loadDiscipline(key){
+  const d = MULTI ? DATA.disciplines.find(x=>x.key===key) : DATA;
+  if(!d) return;
+  cases=d.cases||[]; intro=d.intro; frameworks=d.frameworks||[]; DISC=d.discipline||d.label||""; COV=d.coverage||null;
+}
+const DISC_META = {
+  pm:{icon:'<path d="M4 19h16M4 15l4-6 4 3 4-8 4 4"/>',
+      desc:"Product design, root cause analysis, pricing, app improvement, guesstimates, market entry, product strategy, success metrics & favorite-product critiques."},
+  consulting:{icon:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+      desc:"Profitability, market entry, pricing, growth, M&A, business-situation structuring drills, root cause analysis & guesstimates — Consulting cases."},
+  marketing:{icon:'<path d="M3 11l18-5v12L3 13z"/><path d="M11 13v5a2 2 0 0 0 4 0v-1"/>',
+      desc:"Classic HBS decision cases (NTT DoCoMo, Aqualisa, Trader Joe’s, Omnitel, Scorpio, TiVo & more) — issue-tree structured, most without a single canonical answer."}
+};
+function hubView(){
+  const live = DATA.disciplines.filter(d=>!d.planned);
+  const totalCases = live.reduce((s,d)=>s+(d.cases?d.cases.length:0),0);
+  const totalFw = live.reduce((s,d)=>s+(d.frameworks?d.frameworks.length:0),0);
+  const typeSet = new Set(); live.forEach(d=>(d.cases||[]).forEach(c=>typeSet.add(c.facets.case_type)));
+  const cards = DATA.disciplines.map(d=>{
+    const meta = DISC_META[d.key]||{icon:"",desc:""};
+    const ico = meta.icon?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta.icon}</svg>`:"";
+    if(d.planned){
+      return `<div class="hcard soon">
+        <div class="htop"><div class="hico">${ico}</div><span class="hbadge soon">Planned</span></div>
+        <h3>${esc(d.label)}</h3><p>${esc(meta.desc)}</p>
+        <div class="hfoot"><div class="hn">—<small>not started</small></div><div class="hgo" style="color:var(--ink-3)">Opt-in scope</div></div>
+      </div>`;
+    }
+    const n=(d.cases||[]).length;
+    const typeCounts={}; (d.cases||[]).forEach(c=>{const t=c.facets.case_type; typeCounts[t]=(typeCounts[t]||0)+1});
+    const top=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+    const chips = top.slice(0,3).map(([t,ct])=>`<span class="chip">${esc(t)} · ${ct}</span>`).join("")
+      + (top.length>3?`<span class="chip">+${top.length-3} more</span>`:"");
+    return `<button class="hcard" data-disc="${d.key}">
+      <div class="htop"><div class="hico">${ico}</div><span class="hbadge">Live</span></div>
+      <h3>${esc(d.label)}</h3><p>${esc(meta.desc)}</p>
+      <div class="hchips">${chips}</div>
+      <div class="hfoot"><div class="hn">${n}<small>cases</small></div><div class="hgo">Open module →</div></div>
+    </button>`;
+  }).join("");
+  return `<div class="hub">
+    <div class="hhero">
+      <div class="hkicker">Interview prep suite</div>
+      <h1>Pick a discipline</h1>
+      <p>Every case is a worked interview transcript turned into a click-through decision tree — clarify, structure, decide, defend. Search, filter, and replay any case offline.</p>
+      <div class="hstats">
+        <div class="hstat"><b>${totalCases}</b><span>Cases built</span></div>
+        <div class="hstat"><b>${live.length}</b><span>Disciplines live</span></div>
+        <div class="hstat"><b>${typeSet.size}</b><span>Case types</span></div>
+        <div class="hstat"><b>${totalFw}</b><span>Reference frameworks</span></div>
+      </div>
+    </div>
+    <div class="hgrid">${cards}</div>
+  </div>`;
+}
+function goDiscipline(key){
+  S.discipline=key; loadDiscipline(key); S.view="intro"; S.filter=""; S.searchOpen=false;
+  try{ localStorage.setItem("cbstudio_lastDiscipline", key); }catch(e){}
+  render();
+}
+function wireHub(){
+  document.querySelectorAll(".hcard[data-disc]").forEach(b=>b.onclick=()=>goDiscipline(b.dataset.disc));
+}
+const TYPES = {
+  context:{l:"Context",v:"context"}, segment:{l:"Branch",v:"segment"}, decision:{l:"Decision",v:"decision"},
+  option:{l:"Option",v:"option"}, metric:{l:"Metric",v:"metric"}, risk:{l:"Risk / edge",v:"risk"}
+};
+const EMPH = ["Pre-launch","Launch","Post-launch","Segmentation/Targeting","Differentiation","Pricing","Metrics/Measurement","Stakeholder analysis","Channel strategy","Product definition"];
+const MOVES = ["New app vs new feature","New product launch","Geographic expansion","Enter existing/competitive category","Two-sided marketplace","Loyalty/retention design","Timing the entry"];
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const dispName = c => (c.company&&!/^not specified\b/i.test(c.company.trim()))?c.company:c.title;
+const byId = id => cases.find(c=>c.id===id);
+
+const S = {
+  discipline: null,
+  view:"intro", tab:"tree", fEmph:new Set(), fMove:new Set(), fType:new Set(), filter:"", searchOpen:false,
+  seen:{}, sel:{}, collapsed:{}, muted:{}, step:{}, started:{}, playing:false, playH:null,
+  /* v3 additions — in-memory only, never persisted to storage */
+  pan:{}, layout:{}, paneW:{left:340,right:300}, paneCollapsed:{left:false,right:false}, studyH:580,
+  sideCollapsed:false
+};
+/* shared study state: on first open, show the FULL tree (started=false); replay animates on demand */
+function studyState(c){
+  const rm=replayModel(c);
+  if(S.started[c.id]===undefined) S.started[c.id]=false;
+  if(S.step[c.id]==null) S.step[c.id]=rm.len-1;
+  const started=S.started[c.id];
+  let k=Math.max(0,Math.min(S.step[c.id],rm.len-1)); S.step[c.id]=k;
+  return {rm,started,k,
+    revealed: started? rm.revealedAt(k) : null,   // null = reveal everything
+    hot: started? rm.hotAt(k) : new Set(),
+    curIdx: started? k : -1,
+    pct: started? Math.round(((k+1)/rm.len)*100) : 100};
+}
+
+/* ---------------- sidebar ---------------- */
+function caseMatches(c){
+  const f=S.filter.toLowerCase();
+  if(f && !(c.title+" "+c.company+" "+c.industry+" "+c.prompt+" "+(c.subtopics||[]).join(" ")).toLowerCase().includes(f)) return false;
+  if(S.fType.size && !S.fType.has(c.facets.case_type)) return false;
+  if(S.fEmph.size && !c.facets.emphasis.some(e=>S.fEmph.has(e))) return false;
+  if(S.fMove.size && !c.facets.moves.some(m=>S.fMove.has(m))) return false;
+  return true;
+}
+function facetCounts(key,universe){
+  const cnt={}; universe.forEach(v=>cnt[v]=0);
+  cases.forEach(c=>c.facets[key].forEach(v=>{if(cnt[v]!=null)cnt[v]++}));
+  return cnt;
+}
+function renderSide(){
+  const caseTypes=[...new Set(cases.map(c=>c.facets.case_type))];
+  const tC={}, eC=facetCounts("emphasis",EMPH), mC=facetCounts("moves",MOVES);
+  caseTypes.forEach(t=>tC[t]=0); cases.forEach(c=>{if(tC[c.facets.case_type]!=null)tC[c.facets.case_type]++});
+  const list=cases.filter(caseMatches);
+  const q=S.filter.trim().toLowerCase();
+  const tokens=[...[...S.fType].map(v=>["type",v]),...[...S.fEmph].map(v=>["emph",v]),...[...S.fMove].map(v=>["move",v])];
+  const row=(grp,v,set,cnt)=>`<button class="srow ${set.has(v)?"on":""}" data-grp="${grp}" data-f="${esc(v)}">
+      <span class="srow-check">${set.has(v)?"\u2713":""}</span><span class="srow-label">${esc(v)}</span><span class="srow-n">${cnt[v]}</span></button>`;
+  const grp=(label,items,set,cnt,grpkey)=>{
+    const filtered=q?items.filter(v=>v.toLowerCase().includes(q)):items;
+    if(!filtered.length) return "";
+    return `<div class="sgroup"><div class="sgrouplbl">${label}</div>${filtered.map(v=>row(grpkey,v,set,cnt)).join("")}</div>`;
+  };
+  const dropdownBody=[grp("Case type",caseTypes,S.fType,tC,"type"),grp("Strategic emphasis",EMPH,S.fEmph,eC,"emph"),grp("Strategic move",MOVES,S.fMove,mC,"move")].join("")
+    || `<div class="usearch-empty">No filters match "${esc(S.filter)}"</div>`;
+  let h=`<div class="usearch-wrap">
+    <div class="usearch-box ${S.searchOpen?"open":""}" id="usbox">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <div class="usearch-tokens">${tokens.map(([g,v])=>`<span class="utoken" data-grp="${g}" data-f="${esc(v)}">${esc(v)}<button data-rm="1">\u00d7</button></span>`).join("")}</div>
+      <input id="usinput" placeholder="${tokens.length?"":"Search cases, or filter by type\u2026"}" value="${esc(S.filter)}" autocomplete="off">
+      ${(S.filter||tokens.length)?`<button class="usearch-clear" id="usclear" title="Clear all">\u00d7</button>`:""}
+    </div>
+    <div class="usearch-dropdown ${S.searchOpen?"open":""}" id="usdrop">${dropdownBody}</div>
+  </div>
+    <h4>Framework</h4>
+    <button class="citem ${S.view==="intro"?"on":""}" data-v="intro">
+      <div class="r1"><span class="num">§</span><span class="ttl">Intro · ${esc(DISC)}</span></div>
+      <div class="sub">${intro.steps.length} methods overview</div></button>
+    <button class="citem ${S.view==="frameworks"?"on":""}" data-v="frameworks">
+      <div class="r1"><span class="num">▤</span><span class="ttl">Framework Library</span></div>
+      <div class="sub">${frameworks.length} methods & references</div></button>
+    <h4>Cases <span style="margin-left:auto;font-family:var(--mono);text-transform:none;font-variant-numeric:tabular-nums">${list.length}/${cases.length}</span></h4>`;
+  if(!list.length) h+=`<div class="emptside">No case matches these filters.</div>`;
+  list.forEach(c=>{
+    const i=cases.indexOf(c)+1;
+    h+=`<button class="citem ${S.view===c.id?"on":""}" data-v="${c.id}" title="${esc(c.title)}">
+      <div class="r1"><span class="num">${String(i).padStart(2,"0")}</span>
+        <span class="ttl">${esc(dispName(c))}</span><span class="spacer"></span>
+        <span class="dot ${S.seen[c.id]?"":"off"}"></span></div>
+      <div class="sub">${esc(c.facets.industry)} · ${esc(c.facets.difficulty)}</div></button>`;
+  });
+  const side=document.getElementById("side"); side.innerHTML=h;
+  const setFor=g=>g==="type"?S.fType:g==="emph"?S.fEmph:S.fMove;
+  const focusInput=()=>{
+    const inp=document.getElementById("usinput");
+    if(inp){ inp.focus(); const p=inp.value.length; inp.setSelectionRange(p,p); }
+  };
+  const box=document.getElementById("usbox"), inp=document.getElementById("usinput");
+  box.onclick=e=>{ e.stopPropagation(); if(!S.searchOpen){ S.searchOpen=true; renderSide(); focusInput(); } };
+  inp.oninput=e=>{ S.filter=e.target.value; S.searchOpen=true; renderSide(); focusInput(); };
+  inp.onfocus=()=>{ if(!S.searchOpen){ S.searchOpen=true; renderSide(); focusInput(); } };
+  inp.onkeydown=e=>{ if(e.key==="Escape"){ S.searchOpen=false; inp.blur(); renderSide(); } };
+  side.querySelectorAll(".srow[data-f]").forEach(b=>b.onclick=(e)=>{
+    e.stopPropagation();
+    const g=b.dataset.grp, v=b.dataset.f; const set=setFor(g); set.has(v)?set.delete(v):set.add(v);
+    S.searchOpen=true; renderSide(); focusInput();
+  });
+  side.querySelectorAll(".utoken button[data-rm]").forEach(b=>b.onclick=(e)=>{
+    e.stopPropagation(); const tok=b.closest(".utoken"); setFor(tok.dataset.grp).delete(tok.dataset.f);
+    S.searchOpen=true; renderSide(); focusInput();
+  });
+  const uclr=document.getElementById("usclear");
+  if(uclr) uclr.onclick=(e)=>{ e.stopPropagation(); S.filter=""; S.fType.clear(); S.fEmph.clear(); S.fMove.clear(); S.searchOpen=true; renderSide(); focusInput(); };
+  if(S.searchOpen) focusInput();
+  side.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{
+    stopPlay(); S.view=b.dataset.v; S.tab="tree";
+    if(S.view!=="intro") S.seen[S.view]=true;
+    S.searchOpen=false;
+    document.getElementById("side").classList.remove("open"); render(); window.scrollTo(0,0);
+  });
+}
+
+/* ---------------- tree model ---------------- */
+function buildRoots(c){
+  const map={}, roots=[];
+  c.decision_tree.forEach(n=>map[n.id]={...n,kids:[]});
+  c.decision_tree.forEach(n=> n.parent&&map[n.parent] ? map[n.parent].kids.push(map[n.id]) : roots.push(map[n.id]));
+  return {roots,map};
+}
+function ancestors(c,id){const m={};c.decision_tree.forEach(n=>m[n.id]=n);const a=[];let p=m[id];while(p&&p.parent){a.push(p.parent);p=m[p.parent];}return a;}
+
+/* reveal model for guided replay */
+function replayModel(c){
+  const nodes=c.decision_tree;
+  const hasT=c.transcript&&c.transcript.length;
+  if(hasT){
+    const earliest={}; nodes.forEach(n=>earliest[n.id]=(n.turn_refs&&n.turn_refs.length)?Math.min(...n.turn_refs):Infinity);
+    return {
+      hasT:true, len:c.transcript.length,
+      revealedAt:k=>{const s=new Set();nodes.forEach(n=>{if(earliest[n.id]<=k)s.add(n.id)});
+        if(k>=c.transcript.length-1)nodes.forEach(n=>s.add(n.id));
+        [...s].forEach(id=>ancestors(c,id).forEach(a=>s.add(a))); if(nodes[0])s.add(nodes[0].id); return s;},
+      hotAt:k=>new Set(nodes.filter(n=>(n.turn_refs||[]).includes(k)).map(n=>n.id))
+    };
+  }
+  return {
+    hasT:false, len:nodes.length,
+    revealedAt:k=>{const s=new Set();for(let i=0;i<=k&&i<nodes.length;i++){s.add(nodes[i].id);ancestors(c,nodes[i].id).forEach(a=>s.add(a));}if(nodes[0])s.add(nodes[0].id);return s;},
+    hotAt:k=>new Set(nodes[k]?[nodes[k].id]:[])
+  };
+}
+
+/* ---------------- pan / zoom helpers ---------------- */
+let LT=null;          // live-mounted tree refs: {cid,host,canvas,p,W,H}
+let justPanned=false;  // guards a node click that lands right after a background drag
+function getPan(cid){ return S.pan[cid] || (S.pan[cid]={x:0,y:0,z:1,fitted:false}); }
+function getLayout(cid){ return S.layout[cid] || (S.layout[cid]="LR"); }
+function applyTransform(canvas,p){
+  canvas.style.transform=`translate(${p.x}px,${p.y}px) scale(${p.z})`;
+  const z=document.getElementById("zlvlLive"); if(z) z.textContent=Math.round(p.z*100)+"%";
+}
+function fitToView(host,canvas,p,W,H){
+  const vw=host.clientWidth||600, vh=host.clientHeight||400;
+  const nodes=[...canvas.querySelectorAll(".nb")];
+  let bx=0, by=0, bw=W, bh=H;
+  if(nodes.length){
+    const l=nodes.map(n=>n.offsetLeft), t=nodes.map(n=>n.offsetTop);
+    const r=nodes.map(n=>n.offsetLeft+n.offsetWidth), b=nodes.map(n=>n.offsetTop+n.offsetHeight);
+    bx=Math.min(...l); by=Math.min(...t);
+    bw=Math.max(1,Math.max(...r)-bx); bh=Math.max(1,Math.max(...b)-by);
+  }
+  let z=Math.min(vw/bw, vh/bh)*0.92; z=Math.min(3,Math.max(0.25,z));
+  p.z=z; p.x=(vw-bw*z)/2-bx*z; p.y=(vh-bh*z)/2-by*z;
+  applyTransform(canvas,p);
+}
+function wirePanZoom(host,canvas,cid,p){
+  host.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const r=host.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top;
+    const wx=(cx-p.x)/p.z, wy=(cy-p.y)/p.z;
+    const nz=Math.min(3,Math.max(0.25, p.z*(e.deltaY<0?1.12:1/1.12)));
+    p.x=cx-wx*nz; p.y=cy-wy*nz; p.z=nz;
+    applyTransform(canvas,p);
+  },{passive:false});
+  let dragging=false, moved=0;
+  host.addEventListener("pointerdown",e=>{
+    if(e.target.closest(".nb")) return;
+    dragging=true; moved=0; host.classList.add("grabbing");
+    try{ host.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  host.addEventListener("pointermove",e=>{
+    if(!dragging) return;
+    p.x+=e.movementX; p.y+=e.movementY;
+    moved+=Math.abs(e.movementX)+Math.abs(e.movementY);
+    applyTransform(canvas,p);
+  });
+  const end=e=>{
+    if(!dragging) return;
+    if(moved>5){ justPanned=true; setTimeout(()=>{justPanned=false;},0); }
+    dragging=false; host.classList.remove("grabbing");
+  };
+  host.addEventListener("pointerup",end);
+  host.addEventListener("pointercancel",end);
+}
+
+/* ---------------- layout engine (LR / TB) ---------------- */
+function layoutTree(vroots, els, dir, vKids){
+  const PADX=14, PADY=14, GAPY=12, GAPX=22, COLW=200, ROWV=104, BW=172;
+  let maxX=0, maxY=0;
+  if(dir==="TB"){
+    let cursor=PADX;
+    (function walk(){
+      function place(n,depth){
+        const el=els[n.id]; const h=el.offsetHeight; n._h=h;
+        n._y=PADY+depth*ROWV; maxY=Math.max(maxY,n._y+h);
+        const kids=vKids(n);
+        if(!kids.length){ n._x=cursor; cursor+=BW+GAPX; }
+        else{
+          kids.forEach(k=>place(k,depth+1));
+          const f=kids[0], l=kids[kids.length-1];
+          n._x=((f._x+BW/2)+(l._x+BW/2))/2 - BW/2;
+        }
+        maxX=Math.max(maxX,n._x+BW);
+      }
+      vroots.forEach(r=>place(r,0));
+    })();
+    return {W:maxX+PADX+16, H:maxY+PADY+16};
+  }
+  let cursor=PADY;
+  function place(n,depth){
+    const el=els[n.id]; const h=el.offsetHeight; n._h=h;
+    n._x=PADX+depth*COLW; maxX=Math.max(maxX,n._x);
+    const kids=vKids(n);
+    if(!kids.length){ n._y=cursor; cursor+=h+GAPY; }
+    else{
+      kids.forEach(k=>place(k,depth+1));
+      const f=kids[0], l=kids[kids.length-1];
+      n._y=((f._y+els[f.id].offsetHeight/2)+(l._y+els[l.id].offsetHeight/2))/2 - h/2;
+    }
+  }
+  vroots.forEach(r=>place(r,0));
+  return {W:maxX+BW+PADX+16, H:cursor+PADY};
+}
+
+/* ---------------- IIMA tree renderer ---------------- */
+/* opts: {revealed:Set|null(all), hot:Set, onSelect, host } ; returns nothing, fills host */
+function renderTree(host,c,opts){
+  const cid=c.id;
+  if(!c.decision_tree || !c.decision_tree.length){
+    host.innerHTML=`<div class="tpempty">No decision tree for this case.</div>`;
+    return;
+  }
+  const {roots,map}=buildRoots(c);
+  const collapsed=S.collapsed[c.id]||(S.collapsed[c.id]={});
+  const muted=S.muted[c.id]||(S.muted[c.id]={});
+  const revealed=opts.revealed; // null = all solid; else unrevealed rendered as ghosts (layout stays stable)
+  const isVisible=n=> !muted[n.type];
+  function vKids(n){ if(collapsed[n.id]) return []; return n.kids.filter(isVisible); }
+
+  const canvas=document.createElement("div"); canvas.className="treecanvas";
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg"); svg.setAttribute("class","wires");
+  canvas.appendChild(svg);
+
+  const els={};
+  const vroots=roots.filter(isVisible);
+  function makeEl(n){
+    const el=document.createElement("div");
+    el.className="nb "+n.type+(revealed&&!revealed.has(n.id)?" ghost":"")+(n.result?" result":"");
+    el.dataset.id=n.id;
+    el.tabIndex=0; el.setAttribute("role","button");
+    el.setAttribute("aria-pressed", S.sel[c.id]===n.id ? "true":"false");
+    el.setAttribute("aria-label", n.label||"");
+    el.innerHTML=esc(n.label)+(n.value?`<span class="nval">${esc(n.value)}</span>`:"");
+    const kids=vKids(n);
+    const allKids=n.kids.filter(k=>!muted[k.type]);
+    if(allKids.length){
+      const car=document.createElement("button"); car.className="car"; car.textContent=collapsed[n.id]?"+":"–";
+      car.setAttribute("aria-label",(collapsed[n.id]?"Expand ":"Collapse ")+(n.label||"node"));
+      car.dataset.toggle=n.id; el.appendChild(car);
+    }
+    canvas.appendChild(el); els[n.id]=el;
+    kids.forEach(makeEl);
+  }
+  vroots.forEach(makeEl);
+  host.innerHTML=""; host.appendChild(canvas);
+
+  const dir=getLayout(cid);
+  const {W,H}=layoutTree(vroots, els, dir, vKids);
+  canvas.style.width=W+"px"; canvas.style.height=H+"px";
+  svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  function walkPos(n){const el=els[n.id]; el.style.left=n._x+"px"; el.style.top=n._y+"px"; vKids(n).forEach(walkPos);}
+  vroots.forEach(walkPos);
+
+  // wires (+ operator chips on the connector into a node that has `op`)
+  function wire(n){
+    vKids(n).forEach(k=>{
+      const kel=els[k.id];
+      let d, midx, midy;
+      if(dir==="TB"){
+        const px=n._x+86, py=n._y+n._h, cx=k._x+86, cy=k._y, my=py+(cy-py)/2;
+        d=`M ${px} ${py} V ${my} H ${cx} V ${cy}`; midx=cx; midy=my;
+      } else {
+        const px=n._x+172, py=n._y+n._h/2, cx=k._x, cy=k._y+kel.offsetHeight/2, mx=px+(cx-px)/2;
+        d=`M ${px} ${py} H ${mx} V ${cy} H ${cx}`; midx=mx; midy=cy;
+      }
+      const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+      p.setAttribute("d",d);
+      const hot=opts.hot&&opts.hot.has(n.id)&&opts.hot.has(k.id);
+      if(hot)p.setAttribute("class","hot");
+      svg.appendChild(p);
+      if(k.op){
+        const chip=document.createElement("div"); chip.className="opchip"; chip.setAttribute("aria-hidden","true");
+        chip.style.left=(midx-9)+"px"; chip.style.top=(midy-9)+"px";
+        chip.textContent=k.op;
+        canvas.appendChild(chip);
+      }
+      wire(k);
+    });
+  }
+  vroots.forEach(wire);
+
+  // states
+  Object.entries(els).forEach(([id,el])=>{
+    if(opts.hot&&opts.hot.has(id)) el.classList.add("hot");
+    if(S.sel[c.id]===id){ el.classList.add("sel"); el.setAttribute("aria-pressed","true"); }
+  });
+
+  // mount pan/zoom
+  const p=getPan(cid);
+  if(!p.fitted){ fitToView(host,canvas,p,W,H); p.fitted=true; }
+  else applyTransform(canvas,p);
+  wirePanZoom(host,canvas,cid,p);
+  LT={cid,host,canvas,p,W,H};
+
+  // node select: click (guarded against a just-finished background drag) + keyboard
+  host.querySelectorAll(".nb").forEach(el=>{
+    const doSelect=()=>{
+      const id=el.dataset.id; S.sel[c.id]= S.sel[c.id]===id?null:id;
+      const _y=window.scrollY;
+      if(opts.onSelect) opts.onSelect(id); else render();
+      requestAnimationFrame(()=>window.scrollTo(0,_y));
+    };
+    el.onclick=e=>{
+      if(justPanned) return;
+      if(e.target.dataset.toggle!=null){ const id=e.target.dataset.toggle; collapsed[id]=!collapsed[id]; render(); return; }
+      doSelect();
+    };
+    el.onkeydown=e=>{
+      if(e.key==="Enter"||e.key===" "){ e.preventDefault(); doSelect(); }
+    };
+  });
+}
+
+/* zoom / layout / collapse controls bar */
+function treeBar(c,withLegend){
+  const cid=c.id, dir=getLayout(cid);
+  const z=Math.round((S.pan[cid]?S.pan[cid].z:1)*100);
+  const legend=withLegend?`<div class="legend">${Object.entries(TYPES).map(([k,v])=>
+    `<span class="lg ${(S.muted[c.id]||{})[k]?"mut":""}" data-mt="${k}" style="background:var(--nb-${k});color:var(--nb-${k}-fg)">${v.l}</span>`).join("")}</div>`:"";
+  return `<div class="treebar">
+    <div class="seg" role="group" aria-label="Tree layout">
+      <button class="${dir==="LR"?"on":""}" data-layout="LR" aria-pressed="${dir==="LR"}">Horizontal</button>
+      <button class="${dir==="TB"?"on":""}" data-layout="TB" aria-pressed="${dir==="TB"}">Top-down</button>
+    </div>
+    <button class="mini" data-all="1">Expand all</button>
+    <button class="mini" data-all="0">Collapse to spine</button>
+    ${legend}
+    <div class="zoom"><button data-z="-" aria-label="Zoom out">−</button><span class="zlvl" id="zlvlLive">${z}%</span>
+      <button data-z="+" aria-label="Zoom in">+</button><button data-z="fit" title="Fit to view" aria-label="Fit to view">⤢</button>
+    </div>
+  </div>`;
+}
+function wireTreeBar(c){
+  const m=document.getElementById("main");
+  m.querySelectorAll("[data-layout]").forEach(b=>b.onclick=()=>{
+    if(S.layout[c.id]===b.dataset.layout) return;
+    S.layout[c.id]=b.dataset.layout;
+    getPan(c.id).fitted=false;
+    render();
+  });
+  m.querySelectorAll("[data-all]").forEach(b=>b.onclick=()=>{
+    const on=b.dataset.all==="1", col=S.collapsed[c.id]||(S.collapsed[c.id]={});
+    c.decision_tree.forEach(n=>{const d=ancestors(c,n.id).length; col[n.id]= on?false:(d>=1);});
+    render();
+  });
+  m.querySelectorAll("[data-mt]").forEach(b=>b.onclick=()=>{
+    const mu=S.muted[c.id]||(S.muted[c.id]={}); mu[b.dataset.mt]=!mu[b.dataset.mt]; render();
+  });
+  m.querySelectorAll("[data-z]").forEach(b=>b.onclick=()=>{
+    if(!LT||LT.cid!==c.id) return;
+    const {host,canvas,p,W,H}=LT;
+    if(b.dataset.z==="fit"){ fitToView(host,canvas,p,W,H); return; }
+    const vw=host.clientWidth||600, vh=host.clientHeight||400, cx=vw/2, cy=vh/2;
+    const wx=(cx-p.x)/p.z, wy=(cy-p.y)/p.z;
+    const nz= b.dataset.z==="+"? Math.min(3,p.z*1.2) : Math.max(0.25,p.z/1.2);
+    p.x=cx-wx*nz; p.y=cy-wy*nz; p.z=nz;
+    applyTransform(canvas,p);
+  });
+}
+
+/* node detail panel */
+function nodeDetail(c){
+  const id=S.sel[c.id]; if(!id) return `<div class="ndetail"><span class="hintclick">Click any box to read the reasoning behind it — and see where it came up in the interview.</span></div>`;
+  const n=c.decision_tree.find(x=>x.id===id); const t=TYPES[n.type];
+  const quotes=(n.turn_refs||[]).map(k=>c.transcript&&c.transcript[k]?
+    `<div class="qref"><b>${esc(c.transcript[k].speaker)}:</b> ${esc(c.transcript[k].text)}</div>`:"").join("");
+  return `<div class="ndetail">
+    <div class="dt"><span class="pill" style="background:var(--nb-${n.type});color:var(--nb-${n.type}-fg)">${t.l}</span>
+      <h3>${esc(n.label)}</h3></div>
+    <p class="d">${esc(n.detail)}</p>
+    ${quotes?`<div class="quotes"><div class="ql">Where this came up in the interview</div>${quotes}</div>`:""}
+  </div>`;
+}
+
+/* ---------------- study (guided replay) — 3 resizable / collapsible panes ---------------- */
+function studyView(c){
+  const st=studyState(c); const rm=st.rm, k=st.k, cur=st.curIdx, pct=st.pct;
+
+  let rows="";
+  if(rm.hasT){
+    rows=c.transcript.map((t,i)=>{
+      const cls= cur<0?"":(i===cur?"cur":(i<cur?"past":"future"));
+      const nodes=c.decision_tree.filter(n=>(n.turn_refs||[]).includes(i));
+      const tags=nodes.slice(0,4).map(n=>`<span class="tnode" style="background:var(--nb-${n.type});color:var(--nb-${n.type}-fg)">${esc(n.label.slice(0,22))}</span>`).join("");
+      return `<div class="turn ${cls}" data-step="${i}"><div class="who ${t.speaker==="Interviewer"?"i":"c"}">${esc(t.speaker)}</div>
+        <div><p>${esc(t.text)}</p>${nodes.length?`<div class="tnodes">${tags}</div>`:""}</div></div>`;
+    }).join("");
+  } else {
+    rows=c.decision_tree.map((n,i)=>{
+      const cls= cur<0?"":(i===cur?"cur":(i<cur?"past":"future"));
+      return `<div class="turn ${cls}" data-step="${i}"><div class="who i">${TYPES[n.type].l}</div>
+        <div><p><b>${esc(n.label)}</b><br><span style="color:var(--ink-2);font-size:12.6px">${esc(n.detail)}</span></p></div></div>`;
+    }).join("");
+  }
+  const srcLabel=rm.hasT?"Interview transcript":"Reasoning steps (no transcript in source)";
+  const lc=S.paneCollapsed.left, rc=S.paneCollapsed.right;
+
+  const leftPane = lc
+    ? `<section class="pane pL rail" id="pLrail" data-side="left" role="button" tabindex="0" aria-expanded="false" aria-label="Expand transcript panel"><span class="railtxt">Transcript</span></section>`
+    : `<section class="pane pL" style="flex:0 0 ${S.paneW.left}px">
+        <div class="paneHead"><b>${srcLabel}</b><div class="progress"><i style="width:${pct}%"></i></div>
+          <button class="mini collapseBtn" data-collapse="left" aria-expanded="true" aria-label="Collapse transcript panel">‹</button></div>
+        <div class="scbody" id="scbody">${rows}</div>
+        <div class="rctrl">
+          <button class="rbtn" data-r="first" aria-label="Jump to first step">⏮</button>
+          <button class="rbtn" data-r="prev">◀ Prev</button>
+          <button class="rbtn play" data-r="play">${S.playing?"❚❚ Pause":(st.started?"▶ Play":"▶ Watch it build")}</button>
+          <button class="rbtn" data-r="next">Next ▶</button>
+          <span class="rstep">${st.started?(k+1)+" / "+rm.len:"full tree"}</span>
+          <span class="spacer" style="flex:1"></span>
+          <button class="rbtn" data-r="all" title="Show the complete tree">Overview</button>
+        </div>
+      </section>`;
+  const rightPane = rc
+    ? `<section class="pane pR rail" id="pRrail" data-side="right" role="button" tabindex="0" aria-expanded="false" aria-label="Expand detail panel"><span class="railtxt">Detail</span></section>`
+    : `<section class="pane pR" style="flex:0 0 ${S.paneW.right}px">
+        <div class="paneHead"><b>Node detail</b>
+          <button class="mini collapseBtn" data-collapse="right" aria-expanded="true" aria-label="Collapse detail panel">›</button></div>
+        <div style="padding:2px 8px 10px">${nodeDetail(c)}</div>
+      </section>`;
+
+  return `<div class="studyWrap">
+    <div class="studyRow" style="height:${S.studyH}px">
+      ${leftPane}
+      ${lc?"":'<div class="gutter gv" data-g="left" role="separator" aria-orientation="vertical" aria-label="Resize transcript panel" tabindex="0"></div>'}
+      <section class="pane pC">${treeBar(c,false)}<div class="treeport" id="tport"></div>
+        <div class="thint">The tree builds as the interview unfolds. Ghosted boxes haven't been reached yet · gold = the move made on the highlighted line.</div>
+      </section>
+      ${rc?"":'<div class="gutter gv" data-g="right" role="separator" aria-orientation="vertical" aria-label="Resize detail panel" tabindex="0"></div>'}
+      ${rightPane}
+    </div>
+    <div class="gutter gh" data-g="h" role="separator" aria-orientation="horizontal" aria-label="Resize panel height" tabindex="0"></div>
+  </div>`;
+}
+function wireStudyGutters(c){
+  const wrap=document.querySelector(".studyWrap"); if(!wrap) return;
+  const refit=()=>{ if(S.view!=="intro") getPan(S.view).fitted=false; };
+  wrap.querySelectorAll(".gutter.gv").forEach(g=>{
+    let startX=0,startL=0,startR=0,dragging=false;
+    g.addEventListener("pointerdown",e=>{
+      dragging=true; startX=e.clientX; startL=S.paneW.left; startR=S.paneW.right;
+      try{g.setPointerCapture(e.pointerId);}catch(err){} g.classList.add("active");
+    });
+    g.addEventListener("pointermove",e=>{
+      if(!dragging) return;
+      const dx=e.clientX-startX;
+      if(g.dataset.g==="left"){
+        S.paneW.left=Math.max(220,Math.min(560,startL+dx));
+        const pane=wrap.querySelector(".pane.pL"); if(pane) pane.style.flex=`0 0 ${S.paneW.left}px`;
+      } else {
+        S.paneW.right=Math.max(240,Math.min(560,startR-dx));
+        const pane=wrap.querySelector(".pane.pR"); if(pane) pane.style.flex=`0 0 ${S.paneW.right}px`;
+      }
+    });
+    const end=()=>{ if(!dragging) return; dragging=false; g.classList.remove("active"); refit(); render(); };
+    g.addEventListener("pointerup",end); g.addEventListener("pointercancel",end);
+    g.addEventListener("keydown",e=>{
+      if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight") return;
+      e.preventDefault(); const step=16, dir=e.key==="ArrowLeft"?-1:1;
+      if(g.dataset.g==="left") S.paneW.left=Math.max(220,Math.min(560,S.paneW.left+dir*step));
+      else S.paneW.right=Math.max(240,Math.min(560,S.paneW.right-dir*step));
+      refit(); render();
+    });
+  });
+  const gh=wrap.querySelector(".gutter.gh");
+  if(gh){
+    let startY=0,startH=0,dragging=false;
+    gh.addEventListener("pointerdown",e=>{
+      dragging=true; startY=e.clientY; startH=S.studyH;
+      try{gh.setPointerCapture(e.pointerId);}catch(err){} gh.classList.add("active");
+    });
+    gh.addEventListener("pointermove",e=>{
+      if(!dragging) return;
+      S.studyH=Math.max(320,Math.min(900,startH+(e.clientY-startY)));
+      const row=wrap.querySelector(".studyRow"); if(row) row.style.height=S.studyH+"px";
+    });
+    const end=()=>{ if(!dragging) return; dragging=false; gh.classList.remove("active"); refit(); render(); };
+    gh.addEventListener("pointerup",end); gh.addEventListener("pointercancel",end);
+    gh.addEventListener("keydown",e=>{
+      if(e.key!=="ArrowUp"&&e.key!=="ArrowDown") return;
+      e.preventDefault(); const step=16, dir=e.key==="ArrowUp"?-1:1;
+      S.studyH=Math.max(320,Math.min(900,S.studyH+dir*step));
+      refit(); render();
+    });
+  }
+  wrap.querySelectorAll("[data-collapse]").forEach(b=>b.onclick=()=>{
+    S.paneCollapsed[b.dataset.collapse]=true; refit(); render();
+  });
+  const railL=document.getElementById("pLrail");
+  if(railL){
+    const open=()=>{ S.paneCollapsed.left=false; refit(); render(); };
+    railL.onclick=open; railL.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}};
+  }
+  const railR=document.getElementById("pRrail");
+  if(railR){
+    const open=()=>{ S.paneCollapsed.right=false; refit(); render(); };
+    railR.onclick=open; railR.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}};
+  }
+}
+
+/* ---------------- tabs ---------------- */
+function treeTab(c){
+  return `<div class="treewrap">${treeBar(c,true)}<div class="treeport" id="tport"></div>
+      <div class="thint">Navy = framing · light blue = analysis branch · blue = decision · grey = option · amber = metric · red = risk. Click a box for its reasoning and the dialogue it came from.</div></div>
+    ${nodeDetail(c)}`;
+}
+function frameworkTab(c){
+  const li=a=>(a&&a.length)?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<div class="empty">Not covered in the source.</div>`;
+  const rows=(c.framework_mapping||[]).map(r=>`<div class="fwrow"><div>${esc(r.stage)}</div>
+    <div class="gen">${esc(r.generic)}</div><div>${esc(r.specific)}</div></div>`).join("");
+  return `<div class="card"><h3><span class="bar"></span>Reusable scaffold → how THIS case used it</h3>
+      <div class="fwrow h"><div>Stage</div><div>Generic move</div><div>In this case</div></div>${rows}</div>
+    <div class="agrid">
+      <div><div class="card"><h3><span class="bar"></span>Recommendation</h3>${li(c.recommendation)}</div>
+        <div class="card" style="background:var(--accent-soft);border-color:var(--accent)"><h3><span class="bar"></span>Key takeaway</h3>
+          <div style="font-size:13.8px;line-height:1.55">${esc(c.key_takeaway)}</div></div></div>
+      <div><div class="card"><h3><span class="bar" style="background:var(--nb-metric)"></span>Success metrics</h3>${li(c.metrics)}</div>
+        <div class="card"><h3><span class="bar" style="background:var(--nb-risk)"></span>Risks &amp; edge cases</h3>${li(c.risks)}</div></div>
+    </div>`;
+}
+function qaTab(c){
+  const qa=(c.clarifying_questions||[]).map(x=>`<div class="qa"><p class="q">${esc(x.q)}</p><p class="a">${esc(x.a)}</p></div>`).join("");
+  const pb=(c.interviewer_pushbacks||[]).map(x=>`<div class="qa pb"><p class="q">↯ ${esc(x.pushback)}</p><p class="a">${esc(x.handling)}</p></div>`).join("");
+  return `<div class="agrid">
+    <div class="card"><h3><span class="bar"></span>Clarifying questions asked</h3>${qa||'<div class="empty">None recorded in the source.</div>'}</div>
+    <div class="card"><h3><span class="bar" style="background:var(--nb-risk)"></span>Interviewer pushbacks</h3>${pb||'<div class="empty">None recorded in the source.</div>'}</div></div>`;
+}
+
+/* ---------------- intro ---------------- */
+function introView(){
+  const cell=(t,a,bar)=>`<div class="card"><h3><span class="bar" ${bar?`style="background:${bar}"`:""}></span>${t}</h3><ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  return `<div class="chead"><div class="kicker">Framework · pp. ${esc(intro.page_range)}</div>
+      <h1>${esc(intro.title)}</h1>
+      <div class="chips"><span class="chip k">Applies to all ${cases.length} cases</span></div></div>
+    <div class="prompt"><div class="lbl">About this discipline</div><p>${esc(intro.definition)}</p></div>
+    <div class="tabs" style="pointer-events:none"><span class="tab on">The ${intro.steps.length} methods</span></div>
+    <div class="fw-cards">${intro.steps.map((s,i)=>`<div class="step"><div class="n">STEP ${i+1}</div>
+      <b>${esc(s.step.replace(/^\d+\.\s*/,""))}</b><p>${esc(s.detail)}</p></div>`).join("")}</div>
+    ${COV?`<div class="agrid" style="margin-top:18px">
+      <div>${cell("Coverage",[COV.built+" cases built",COV.flagged+" flagged \u2192 Framework Library"].concat(Object.entries(COV.by_type||{}).map(e=>e[0]+": "+e[1])))}</div>
+      <div>${cell("Framework Library",["Open the sidebar \u2192 Framework Library for the "+frameworks.length+" methods & references this module teaches."],"var(--nb-metric)")}</div>
+    </div>`:(intro.pricing_approaches?`<div class="agrid" style="margin-top:18px">
+      <div>${cell("Pricing approaches",intro.pricing_approaches)}${cell("Marketing funnel",intro.marketing_funnel)}</div>
+      <div>${cell("Metrics the book suggests",intro.example_metrics,"var(--nb-metric)")}${cell("Risks the book suggests",intro.example_risks,"var(--nb-risk)")}</div>
+    </div>`:"")}`;
+}
+
+/* ---------------- render ---------------- */
+function frameworksView(){
+  const fw=frameworks.map(f=>`<div class="step"><div class="n">${esc(f.page?("p."+f.page):"REF")}</div><b>${esc(f.name)}</b><p>${esc(f.when_to_use||f.definition||"")}</p>${(f.steps&&f.steps.length)?`<ul>${f.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}</div>`).join("");
+  return `<div class="chead"><div class="kicker">${esc(DISC)} · Framework Library</div><h1>Frameworks & Methods</h1><div class="chips"><span class="chip k">${frameworks.length} entries</span></div></div>
+    <div class="prompt"><div class="lbl">How to use</div><p>Reference scaffolds the cases apply. Open any case for a worked example.</p></div>
+    <div class="fw-cards">${fw}</div>`;
+}
+function render(){
+  const wrap=document.querySelector(".wrap");
+  const toHub=document.getElementById("toHub"), sideToggle=document.getElementById("sideToggle"), hamb=document.getElementById("hamb");
+  if(MULTI && !S.discipline){
+    document.getElementById("subtitle").textContent=DATA.subtitle||"";
+    document.getElementById("side").innerHTML="";
+    wrap.classList.add("nosidebar");
+    if(toHub) toHub.style.display="none";
+    if(sideToggle) sideToggle.style.display="none";
+    if(hamb) hamb.style.display="none";
+    document.getElementById("main").innerHTML=hubView();
+    wireHub();
+    return;
+  }
+  wrap.classList.remove("nosidebar");
+  if(toHub) toHub.style.display=MULTI?"":"none";
+  if(sideToggle) sideToggle.style.display="";
+  if(hamb) hamb.style.display="";
+  const _st=document.getElementById("subtitle");
+  if(_st) _st.textContent = MULTI ? (DATA.disciplines.find(d=>d.key===S.discipline)||{}).subtitle||"" : (DATA.subtitle||"");
+  renderSide();
+  const main=document.getElementById("main");
+  if(S.view==="intro"){ main.innerHTML=introView(); wireStatic(); mountTree(); return; }
+  if(S.view==="frameworks"){ main.innerHTML=frameworksView(); wireStatic(); return; }
+  const c=byId(S.view), i=cases.indexOf(c);
+  const warn=/misplaced|apparently|not actually|does not actually/i.test((c.extraction_notes||"")+(c.page_range||""));
+  const tabs=[["tree","Decision tree"],["study","Guided replay"],["framework","Framework map"],
+              ["qa","Q&A + pushbacks"],["practice","Practice"]];
+  let body = S.tab==="study"?studyView(c): S.tab==="tree"?treeTab(c):
+             S.tab==="framework"?frameworkTab(c): S.tab==="qa"?qaTab(c): practiceView(c);
+  main.innerHTML=`<div class="chead"><div class="kicker">Case ${String(i+1).padStart(2,"0")} of ${cases.length} · ${esc(c.facets.difficulty)}</div>
+      <h1>${esc(c.title)}</h1>
+      <div class="chips"><span class="chip k">${esc(c.facets.industry)}</span>
+        ${c.facets.emphasis.map(e=>`<span class="chip">${esc(e)}</span>`).join("")}
+        ${warn?'<span class="chip warn">source anomaly — see footnote</span>':""}</div></div>
+    <div class="prompt"><div class="lbl">Interviewer prompt</div><p>${esc(c.prompt)}</p></div>
+    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""} ${k==='practice'?'pll':''}" data-tab="${k}" role="tab" aria-selected="${S.tab===k}">${l}</button>`).join("")}</div>
+    ${body}
+    <div class="nav"><button class="mini" data-go="-1">← Previous</button><button class="mini" data-go="1">Next →</button></div>
+    <div class="foot">${c.extraction_notes?`<div style="max-width:640px"><b>Extraction footnote:</b> ${esc(c.extraction_notes)}</div>`:""}
+      <div>${esc(c.source||"")}</div></div>`;
+  wireStatic(c); mountTree(c);
+  if(S.tab==="study") wireStudyGutters(c);
+}
+function mountTree(c){
+  const host=document.getElementById("tport"); if(!host||!c) return;
+  if(S.tab==="tree"){ renderTree(host,c,{revealed:null,hot:null,onSelect:null}); wireTreeBar(c); }
+  else if(S.tab==="study"){
+    const st=studyState(c);
+    renderTree(host,c,{revealed:st.revealed,hot:st.hot,
+      onSelect:id=>{ const n=c.decision_tree.find(x=>x.id===id);
+        if(st.started && n&&n.turn_refs&&n.turn_refs.length){ S.step[c.id]=Math.max(...n.turn_refs); }
+        render(); scrollCur(); }});
+    wireTreeBar(c);
+  }
+}
+function scrollCur(){const b=document.getElementById("scbody");if(!b)return;const cur=b.querySelector(".turn.cur");if(cur)cur.scrollIntoView({block:"nearest"});}
+function wireStatic(c){
+  const m=document.getElementById("main");
+  m.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{stopPlay();S.tab=b.dataset.tab;render()});
+  m.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{stopPlay();step(+b.dataset.go)});
+  m.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>replayCtl(c,b.dataset.r));
+  m.querySelectorAll("[data-step]").forEach(t=>t.onclick=()=>{stopPlay();S.step[c.id]=+t.dataset.step;render();scrollCur();});
+}
+function replayCtl(c,cmd){
+  const rm=replayModel(c); const wasStarted=S.started[c.id]; let k=S.step[c.id]||0;
+  if(cmd==="all"){ stopPlay(); S.started[c.id]=false; S.step[c.id]=rm.len-1; render(); return; }
+  if(cmd==="play"){
+    if(S.playing){ stopPlay(); render(); return; }
+    if(!wasStarted || k>=rm.len-1){ S.started[c.id]=true; k=0; }   // (re)start build from 0
+    S.started[c.id]=true; S.step[c.id]=k; S.playing=true;
+    S.playH=setInterval(()=>{ let kk=(S.step[c.id]||0)+1; if(kk>=rm.len){stopPlay();render();return;} S.step[c.id]=kk;render();scrollCur(); },1400);
+    render(); scrollCur(); return;
+  }
+  S.started[c.id]=true;
+  if(cmd==="first"){stopPlay();k=0}
+  else if(cmd==="prev"){stopPlay(); k=wasStarted?Math.max(0,k-1):0}
+  else if(cmd==="next"){stopPlay(); k=wasStarted?Math.min(rm.len-1,k+1):0}
+  S.step[c.id]=k; render(); scrollCur();
+}
+function stopPlay(){S.playing=false;if(S.playH){clearInterval(S.playH);S.playH=null;}}
+function step(d){
+  const i=S.view==="intro"?-1:cases.indexOf(byId(S.view)); const ni=i+d;
+  if(ni<0)S.view="intro"; else if(ni<cases.length){S.view=cases[ni].id;S.seen[S.view]=true;} else return;
+  S.tab="tree"; render(); window.scrollTo(0,0);
+}
+
+/* practice (de-emphasised) */
+function practiceView(c){
+  const spine=buildRoots(c).roots[0]; const items=(spine?spine.kids:[]).map(k=>k.label);
+  return `<div class="note">Practice mode: structure your own answer before revealing. Learning-first — the guided replay and decision tree are the main tools.</div>
+    <div class="card"><h3><span class="bar"></span>Your structure</h3>
+      <textarea id="pnotes" style="width:100%;min-height:150px;padding:11px;border:1px solid var(--line-2);border-radius:9px;background:var(--panel-2);color:var(--ink);font:14px/1.6 inherit" placeholder="What are you solving for? Who's the customer? Options? How will you measure it?"></textarea></div>
+    <div class="card"><h3><span class="bar"></span>Top-level branches the casebook used</h3>
+      <ul>${items.length?items.map(t=>`<li>${esc(t)}</li>`).join(""):'<li>—</li>'}</ul></div>`;
+}
+
+/* ---------------- sidebar collapse (desktop, explicit — independent of mobile hamburger) ---------------- */
+function renderReopenBtn(){
+  let btn=document.getElementById("reopenSide");
+  if(S.sideCollapsed){
+    if(!btn){
+      btn=document.createElement("button"); btn.id="reopenSide"; btn.className="reopenSide";
+      btn.setAttribute("aria-label","Show sidebar"); btn.textContent="›";
+      btn.onclick=()=>{
+        S.sideCollapsed=false; document.querySelector(".wrap").classList.remove("sidecol");
+        document.getElementById("sideToggle").setAttribute("aria-expanded","true");
+        btn.remove();
+      };
+      document.body.appendChild(btn);
+    }
+  } else if(btn) btn.remove();
+}
+document.getElementById("sideToggle").onclick=()=>{
+  S.sideCollapsed=!S.sideCollapsed;
+  document.querySelector(".wrap").classList.toggle("sidecol",S.sideCollapsed);
+  document.getElementById("sideToggle").setAttribute("aria-expanded",(!S.sideCollapsed).toString());
+  renderReopenBtn();
+};
+
+/* global */
+document.addEventListener("click",e=>{
+  if(!S.searchOpen) return;
+  const wrap=document.querySelector(".usearch-wrap");
+  if(wrap && !wrap.contains(e.target)){ S.searchOpen=false; renderSide(); }
+});
+document.getElementById("theme").onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==="dark"?"light":"dark";render();};
+document.getElementById("hamb").onclick=()=>document.getElementById("side").classList.toggle("open");
+const toHubBtn=document.getElementById("toHub");
+if(toHubBtn) toHubBtn.onclick=()=>{ S.discipline=null; S.searchOpen=false; render(); };
+document.addEventListener("keydown",e=>{
+  if(/INPUT|TEXTAREA/.test(e.target.tagName))return;
+  if(MULTI&&!S.discipline)return;
+  if(S.view!=="intro"&&S.tab==="study"){ if(e.key==="ArrowRight"){replayCtl(byId(S.view),"next")} if(e.key==="ArrowLeft"){replayCtl(byId(S.view),"prev")} }
+  if(e.key==="j")step(1); if(e.key==="k")step(-1); if(e.key==="/"){e.preventDefault();S.searchOpen=true;renderSide();const i=document.getElementById("usinput");if(i)i.focus();}
+});
+if(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches)document.documentElement.dataset.theme="dark";
+if(!MULTI){
+  loadDiscipline(null);
+}else{
+  let startDisc=null;
+  try{
+    const last=localStorage.getItem("cbstudio_lastDiscipline");
+    if(last && DATA.disciplines.some(d=>d.key===last && !d.planned)) startDisc=last;
+  }catch(e){}
+  if(startDisc){ S.discipline=startDisc; loadDiscipline(startDisc); }
+}
+render();
+</script>
+<p style="text-align:center;font-size:12px;color:var(--ink-3);padding:0 16px 32px">Built by <a href="/" style="color:inherit">Shouvik Sarkar</a> · Demo with 3 original cases. The full 251-case library is private.</p></body>
+</html>
+
+</body></html>

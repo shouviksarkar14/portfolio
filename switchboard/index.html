@@ -1,0 +1,901 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Switch Board · demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control-room board. Sticky masthead + tabs, summary strip, action rail, then dense tables. Pine accent, amber for urgency. */
+:root{
+  --bg:#F5F7F6; --surface:#FFFFFF; --sunk:#ECF0EE; --line:#D9E0DD; --fg:#14201C; --muted:#5B6B65; --faint:#8A9893;
+  --accent:#1D6B52; --accent-ink:#FFFFFF; --accent-soft:#DDEEE7;
+  --warn:#B86E00; --warn-soft:#FFF1D9; --bad:#B23A3A; --bad-soft:#FBE4E2; --good:#1F7A3E; --good-soft:#DFF3E4;
+  --info:#2F5EA8; --info-soft:#E1EAF8; --violet:#6B4FB0; --violet-soft:#ECE6F8; --grey-soft:#E9ECEB;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1513; --surface:#161E1B; --sunk:#1C2622; --line:#2A3631; --fg:#E4ECE8; --muted:#9AABA4; --faint:#6E7F78;
+  --accent:#4FBF96; --accent-ink:#06120D; --accent-soft:#183329;
+  --warn:#F0A640; --warn-soft:#33260F; --bad:#EE7B73; --bad-soft:#3A1C1A; --good:#63CF86; --good-soft:#163020;
+  --info:#83A9EC; --info-soft:#18243A; --violet:#B39AF0; --violet-soft:#251E3A; --grey-soft:#232C29; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1513; --surface:#161E1B; --sunk:#1C2622; --line:#2A3631; --fg:#E4ECE8; --muted:#9AABA4; --faint:#6E7F78;
+  --accent:#4FBF96; --accent-ink:#06120D; --accent-soft:#183329;
+  --warn:#F0A640; --warn-soft:#33260F; --bad:#EE7B73; --bad-soft:#3A1C1A; --good:#63CF86; --good-soft:#163020;
+  --info:#83A9EC; --info-soft:#18243A; --violet:#B39AF0; --violet-soft:#251E3A; --grey-soft:#232C29; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.mast{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.mast-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:14px 0}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:24px;letter-spacing:-.02em;margin:0}
+.brand .sub{color:var(--muted);font-size:12px}
+.sync{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block}
+.dot.ok{background:var(--good)} .dot.stale{background:var(--warn)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-block:10px 0;scrollbar-width:none}
+nav.tabs button{background:none;border:0;padding:8px 12px 10px;border-bottom:2px solid transparent;color:var(--muted);font-weight:500;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs .count{font-family:var(--f-mono);font-size:11px;background:var(--sunk);border-radius:99px;padding:1px 6px;margin-left:6px}
+main{padding-block:20px 60px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 11px;cursor:pointer;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg);border-color:var(--line)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:14px 16px;min-width:0}
+.kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.kpi .val{font-family:var(--f-display);font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px}
+.kpi .hint{font-size:12px;color:var(--faint);margin-top:2px}
+.funnel{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--sunk);margin-top:10px}
+.funnel span{display:block;height:100%}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;margin-top:20px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.panel-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-h h2{font-family:var(--f-display);font-size:16px;font-weight:700;margin:0;letter-spacing:-.01em}
+.panel-h .meta{color:var(--muted);font-size:12px}
+.panel-h .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.actions{list-style:none;margin:0;padding:6px}
+.actions li{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 8px;border-radius:8px}
+.actions li:hover{background:var(--sunk)}
+.actions .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--faint)}
+.actions .bar.urgent{background:var(--bad)} .actions .bar.soon{background:var(--warn)} .actions .bar.info{background:var(--info)}
+.actions .t{font-weight:600;font-size:13px}
+.actions .d{color:var(--muted);font-size:12px}
+.actions .when{font-family:var(--f-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.qa{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.empty{padding:22px 16px;color:var(--muted);font-size:13px;text-align:center}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.search{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;width:200px}
+.chipset{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--surface);cursor:pointer;user-select:none}
+th[data-sort]:hover{color:var(--fg)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--sunk)}
+tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.co{font-weight:600}
+.role{color:var(--muted);font-size:12px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mono{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-Wishlist,.s-Drafting{background:var(--grey-soft);color:var(--muted)}
+.s-Referral-asked{background:var(--info-soft);color:var(--info)}
+.s-Applied{background:var(--accent-soft);color:var(--accent)}
+.s-Assessment{background:var(--warn-soft);color:var(--warn)}
+.s-Screening{background:var(--violet-soft);color:var(--violet)}
+.s-Interviewing,.s-Offer{background:var(--good-soft);color:var(--good)}
+.s-Rejected{background:var(--bad-soft);color:var(--bad)}
+.s-Ghosted,.s-Passed{background:var(--grey-soft);color:var(--faint)}
+select.inline{border:1px solid transparent;background:transparent;border-radius:6px;padding:2px 4px;cursor:pointer;max-width:150px}
+select.inline:hover{border-color:var(--line);background:var(--surface)}
+.age{font-family:var(--f-mono);font-size:12px}
+.age.warn{color:var(--warn);font-weight:500}.age.bad{color:var(--bad);font-weight:500}
+.tag{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted);white-space:nowrap}
+.flagtag{font-size:11px;color:var(--warn);font-weight:600}
+.small{font-size:12px;color:var(--muted)}
+.insights{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+.minitable td,.minitable th{padding:6px 12px;cursor:default}
+.barcell{display:flex;align-items:center;gap:8px}
+.barcell .b{height:6px;border-radius:3px;background:var(--accent);min-width:2px}
+/* jobs */
+.jobs{display:grid;gap:10px;padding:12px}
+.job{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.job.dim{opacity:.55}
+.fit{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:17px;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--sunk) 0);position:relative}
+.fit::after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--surface)}
+.fit b{position:relative;z-index:1;font-variant-numeric:tabular-nums}
+.job h3{margin:0;font-size:14px;font-weight:600}
+.job .row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:3px;color:var(--muted);font-size:12px}
+.job .why{font-size:12px;color:var(--muted);margin-top:4px}
+.job .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.new-badge{background:var(--accent);color:var(--accent-ink);border-radius:4px;font-size:10px;font-weight:600;padding:1px 5px;letter-spacing:.04em}
+.wl{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px}
+.wl .chip{display:inline-flex;gap:6px;align-items:center;cursor:default}
+.wl .chip button{border:0;background:none;color:var(--faint);cursor:pointer;padding:0;line-height:1}
+.addrow{display:flex;gap:6px;padding:0 14px 14px}
+.addrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
+.srcnote{padding:12px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);line-height:1.5}
+.srcnote b{color:var(--fg);font-weight:600}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,16,14,.35);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:41;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.drawer-h h2{margin:0;font-family:var(--f-display);font-size:20px;letter-spacing:-.01em}
+.drawer-b{overflow-y:auto;padding:16px 18px;display:grid;gap:16px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:grid;gap:4px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px;width:100%;min-width:0}
+.field textarea{min-height:70px;resize:vertical}
+.sect h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.timeline{list-style:none;margin:0;padding:0;border-left:2px solid var(--line);margin-left:4px}
+.timeline li{padding:0 0 10px 14px;position:relative;font-size:13px}
+.timeline li::before{content:"";position:absolute;left:-6px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.timeline .mono{color:var(--muted)}
+.drawer-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.flagbox{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;z-index:60}
+.banner{background:var(--info-soft);color:var(--info);border-radius:var(--r);padding:12px 14px;font-size:13px;margin-bottom:16px}
+.outreach-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.conf{font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px}
+.conf.Certain{background:var(--good-soft);color:var(--good)}.conf.Likely{background:var(--info-soft);color:var(--info)}.conf.Guessing{background:var(--warn-soft);color:var(--warn)}
+/* interviews */
+.nextup{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:var(--r);padding:12px 16px;margin-bottom:16px}
+.nextup .clock{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nextup .clock small{display:block;font-family:var(--f-body);font-weight:500;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rounds{display:grid;gap:12px;padding:12px}
+.round{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.round.past{opacity:.8}
+.when-box{border-right:1px solid var(--line);padding-right:12px;display:grid;align-content:start;gap:2px}
+.when-box .dd{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.when-box .mm{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.when-box .tt{font-family:var(--f-mono);font-size:12px;margin-top:6px}
+.when-box .rel{font-size:11px;font-weight:600;margin-top:4px}
+.rel.soon{color:var(--bad)}.rel.near{color:var(--warn)}.rel.later{color:var(--muted)}
+.round h3{margin:0;font-size:15px;font-weight:600}
+.round .meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px;font-size:12px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 10px;margin-top:10px;font-size:13px}
+.kv dt{color:var(--muted);font-size:12px}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.prep{margin-top:10px;background:var(--sunk);border-radius:8px;padding:9px 12px;font-size:13px;white-space:pre-wrap}
+.round .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.sectlabel{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:14px 14px 0}
+/* auto-apply */
+.switch{display:flex;align-items:center;gap:10px;font-weight:600}
+.switch input{width:18px;height:18px;accent-color:var(--accent)}
+.q-item{display:grid;gap:8px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.q-item .top{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
+.q-item .fit{width:44px;height:44px;font-size:15px}
+.reason{font-size:12px;color:var(--muted)}
+.ans{display:grid;gap:4px}.ans label{font-size:12px;font-weight:600}
+.ans textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px;min-height:70px;width:100%;resize:vertical}
+.st-review{background:var(--warn-soft);color:var(--warn)}.st-approved,.st-drafted{background:var(--info-soft);color:var(--info)}
+.st-submitted{background:var(--good-soft);color:var(--good)}.st-failed{background:var(--bad-soft);color:var(--bad)}.st-skipped,.st-manual{background:var(--grey-soft);color:var(--muted)}
+.checks{display:flex;flex-wrap:wrap;gap:6px 14px}.checks label{display:flex;gap:6px;align-items:center;font-size:13px;text-transform:none;letter-spacing:0;color:var(--fg)}
+.checks input{width:auto}
+.vet{border-radius:8px;padding:10px 12px;font-size:13px}
+.vet.ok{background:var(--good-soft);color:var(--good)}.vet.no{background:var(--warn-soft);color:var(--warn)}
+.steps{margin:0;padding-left:18px;font-size:12px;color:var(--muted);display:grid;gap:4px}
+@media (max-width:980px){.grid2,.insights,.outreach-grid{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:last-child{grid-column:1/-1}}
+@media (max-width:560px){.round{grid-template-columns:minmax(0,1fr)}.when-box{border-right:0;border-bottom:1px solid var(--line);padding:0 0 8px;grid-auto-flow:column;justify-content:start;gap:10px;align-items:baseline}.when-box .tt,.when-box .rel{margin-top:0}.nextup{grid-template-columns:minmax(0,1fr)}.kv{grid-template-columns:minmax(0,1fr)}.job{grid-template-columns:44px minmax(0,1fr)}.job .acts{grid-column:1/-1;justify-content:flex-start}.fit{width:44px;height:44px;font-size:15px}.fgrid{grid-template-columns:1fr}.search{width:100%}.brand h1{font-size:20px}}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="mast-row">
+      <div class="brand"><h1>Switch Board</h1><span class="sub">PM job search · India / Remote</span></div>
+      <div class="sync" id="sync"><span class="dot"></span><span>Connecting…</span></div>
+      <button class="btn primary" id="addBtn" type="button">+ Add application</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="pipeline" id="tab-pipeline">Pipeline<span class="count" id="c-pipe">–</span></button>
+      <button role="tab" aria-selected="false" data-tab="interviews" id="tab-interviews">Interviews<span class="count" id="c-int">–</span></button>
+      <button role="tab" aria-selected="false" data-tab="jobs" id="tab-jobs">New roles<span class="count" id="c-jobs">–</span></button>
+      <button role="tab" aria-selected="false" data-tab="apply" id="tab-apply">Auto-apply<span class="count" id="c-apply">–</span></button>
+      <button role="tab" aria-selected="false" data-tab="outreach" id="tab-outreach">Outreach &amp; POCs<span class="count" id="c-out">–</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <!-- PIPELINE -->
+  <section id="view-pipeline">
+    <div id="nextUp"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-h">
+          <h2>Applications</h2><span class="meta" id="appMeta"></span>
+          <div class="sp filters">
+            <input class="search" id="q" type="search" placeholder="Search company, role, POC" aria-label="Search applications">
+            <div class="chipset" id="stageChips"></div>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr>
+              <th data-sort="company">Company / role</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="dateApplied">Applied</th>
+              <th data-sort="age">Idle</th>
+              <th data-sort="platform">Platform</th>
+              <th data-sort="cv">CV</th>
+              <th data-sort="poc">POC / referral</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="rowsEmpty" hidden>Applications appear here after the first sync. Use “Add application” to log one now.</div>
+      </div>
+      <aside class="panel">
+        <div class="panel-h"><h2>Do next</h2><span class="meta" id="actMeta"></span></div>
+        <ul class="actions" id="actions"></ul>
+      </aside>
+    </div>
+    <div class="insights">
+      <div class="panel">
+        <div class="panel-h"><h2>Which CV converts</h2><span class="meta">Response = moved past “Applied”</span></div>
+        <div class="tablewrap"><table class="minitable" id="cvTable"></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Which channel converts</h2><span class="meta">Grouped platforms</span></div>
+        <div class="tablewrap"><table class="minitable" id="chTable"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOBS -->
+  <section id="view-jobs" hidden>
+    <div class="grid2" style="margin-top:0">
+      <div class="panel">
+        <div class="panel-h">
+          <h2>New PM roles</h2><span class="meta" id="jobMeta"></span>
+          <div class="sp filters">
+            <div class="chipset" id="ageChips"></div>
+            <button class="chip" id="fitToggle" aria-pressed="true" type="button">Fit ≥ 50</button>
+            <button class="chip" id="wlToggle" aria-pressed="false" type="button">Watchlist only</button>
+            <button class="chip" id="dismissedToggle" aria-pressed="false" type="button">Show dismissed</button>
+          </div>
+        </div>
+        <div class="jobs" id="jobs"></div>
+      </div>
+      <aside class="panel">
+        <div class="panel-h"><h2>Watchlist</h2><span class="meta" id="wlMeta"></span></div>
+        <div class="wl" id="wl"></div>
+        <form class="addrow" id="wlForm"><input id="wlInput" placeholder="Add company (e.g. Zepto)" aria-label="Add company to watchlist"><button class="btn sm" type="submit">Add</button></form>
+        <div class="srcnote">
+          <b>Where roles come from.</b> LinkedIn job-alert emails in your Gmail, hirist and other portal digests, RapidAPI Job Search (LinkedIn, Wellfound, YC; once connected), and searches of Ashby, Greenhouse and Lever boards. Each sync keeps roles posted in the last 24h. Watchlist companies get +15 fit and rank first.<br><br>
+          <b>How fit is scored.</b> Fit starts at 50. Product company, consumer, platform or B2B SaaS work, and an India or Remote location each add points. Consulting, forward-deployed, bank Product Owner and 8+ year roles subtract points.
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- INTERVIEWS -->
+  <section id="view-interviews" hidden>
+    <div class="grid2" style="margin-top:0">
+      <div class="panel">
+        <div class="panel-h"><h2>Rounds</h2><span class="meta" id="intMeta"></span>
+          <div class="sp"><div class="chipset" id="intChips"></div></div></div>
+        <div id="roundList"></div>
+      </div>
+      <aside class="panel">
+        <div class="panel-h"><h2>How this list is built</h2></div>
+        <div class="srcnote" style="border-top:0">
+          <b>Sources.</b> Each sync reads interview invites, reschedules, assessment links and calendar files in your Gmail and adds or updates a round on the matching application. Every card links back to the email it came from. You can also add or fix a round from an application's panel.<br><br>
+          <b>What a card shows.</b> Date and time in IST, the meeting link, who you meet, the recruiter to contact, the job post, and prep notes taken from the invite.<br><br>
+          <b>After a round.</b> Mark it done and log how it went. The application's status stays yours to move.
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- AUTO-APPLY -->
+  <section id="view-apply" hidden>
+    <div class="grid2" style="margin-top:0">
+      <div class="panel">
+        <div class="panel-h"><h2>Apply queue</h2><span class="meta" id="aqMeta"></span>
+          <div class="sp"><div class="chipset" id="aqChips"></div></div></div>
+        <div class="jobs" id="aqList"></div>
+      </div>
+      <aside style="display:grid;gap:20px;min-width:0">
+        <div class="panel">
+          <div class="panel-h"><h2>Your profile</h2></div>
+          <div style="padding:12px 14px;display:grid;gap:10px" id="profBox"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h2>Rules</h2><span class="meta">Applied at each sync</span></div>
+          <form id="ruleForm" style="padding:12px 14px;display:grid;gap:12px"></form>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h2>How it works</h2></div>
+          <div style="padding:12px 14px"><ol class="steps">
+            <li>Each sync takes new roles with a direct Ashby, Greenhouse, Lever or Workable link and prepares an application: the CV that fits the role, your profile fields and draft answers.</li>
+            <li>Roles at or above your fit bar with no written questions are submitted at the next sync, up to your daily limit.</li>
+            <li>Roles with written questions wait here. Edit the answers and approve, and the next sync submits them.</li>
+            <li>Portals that need a login (LinkedIn, Workday, Naukri, company portals) stay manual. The card links the post and gives you the answers to paste.</li>
+            <li>Every submission is logged in Pipeline as Applied, with the CV used.</li>
+          </ol></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- OUTREACH -->
+  <section id="view-outreach" hidden>
+    <div class="outreach-grid">
+      <div class="panel">
+        <div class="panel-h"><h2>POC finder</h2><span class="meta">Runs at the next sync</span></div>
+        <div style="padding:12px 14px;display:grid;gap:10px">
+          <div class="small">Pick an application or role. At the next sync, Claude checks the recruiter named on the posting, then the company's careers and team pages and public profiles, and adds up to 3 likely contacts. Each contact carries a confidence tag and a draft note. Nothing is sent for you.</div>
+          <form id="pocForm" class="fgrid">
+            <div class="field full"><label for="pocTarget">For</label><select id="pocTarget"></select></div>
+            <div class="field full"><button class="btn primary" type="submit">Queue POC search</button></div>
+          </form>
+        </div>
+        <div class="panel-h" style="border-top:1px solid var(--line)"><h2>Queue</h2><span class="meta" id="pocMeta"></span></div>
+        <ul class="actions" id="pocList"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>Referrals &amp; outreach log</h2><span class="meta" id="outMeta"></span></div>
+        <ul class="actions" id="outList"></ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="drawerRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+(function(){
+const STAGES=["Wishlist","Drafting","Referral asked","Applied","Assessment","Screening","Interviewing","Offer","Rejected","Ghosted","Passed"];
+const CLOSED=new Set(["Rejected","Ghosted","Passed"]);
+const RESPONDED=new Set(["Assessment","Screening","Interviewing","Offer","Rejected"]);
+const PRE=new Set(["Wishlist","Drafting","Referral asked"]);
+const CVS=["","PM Core","AI PM","Custom","Unknown"];
+const normCV=c=>{c=String(c||"").replace(/\s*v\d+(\.\d+)?\s*$/i,"").trim();if(/^ai[-\s]?pm$/i.test(c))return"AI PM";if(/^pm core$/i.test(c))return"PM Core";return c};
+const cvOpts=v=>{v=normCV(v);const list=CVS.includes(v)?CVS:[...CVS,v];return list.map(c=>`<option value="${esc(c)}" ${c===v?"selected":""}>${c||"—"}</option>`).join("")};
+const PLATFORM_GROUP=p=>{p=(p||"").toLowerCase();
+  if(/referral|intro|friend/.test(p))return"Referral / intro";
+  if(/linkedin/.test(p))return"LinkedIn";
+  if(/ashby|greenhouse|lever|workable|rippling|workday|keka|darwinbox|greythr|successfactors|kula|portal|careers/.test(p))return"Company ATS / portal";
+  if(/hirist|instahyre|naukri|cutshort|wellfound|jobgether/.test(p))return"Job board";
+  if(/email|recruiter/.test(p))return"Direct email";
+  return p?"Other":"Unknown";};
+const todayStr=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+const days=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtD=s=>{if(!s)return"—";const d=new Date(s+"T00:00:00");return d.toLocaleDateString("en-IN",{day:"numeric",month:"short"})};
+const cls=s=>"s-"+String(s).replace(/\s+/g,"-");
+const $=id=>document.getElementById(id);
+
+let db=null, canWrite=true;
+const state={apps:[],jobs:[],watch:[],poc:[],applyq:[],profile:null,profileLoaded:false,uid:null,meta:null,tab:"pipeline",q:"",stage:"Active",sort:{k:"age",dir:-1},jobAge:"24h",fitOnly:true,wlOnly:false,showDismissed:false,intFilter:"Upcoming",aqFilter:"Needs you"};
+const TABS=["pipeline","interviews","jobs","apply","outreach"];
+try{const t=localStorage.getItem("sb.tab");if(t&&TABS.includes(t))state.tab=t;}catch(e){}
+if(location.hash&&TABS.includes(location.hash.slice(1)))state.tab=location.hash.slice(1);
+
+function toast(msg){const r=$("toastRoot");r.innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>r.innerHTML="",2400)}
+
+/* ---------- derived ---------- */
+function idle(a){const ref=a.lastActivity||a.dateApplied;return ref?days(ref,todayStr()):null}
+function followState(a){
+  if(a.status!=="Applied")return null;if(a.snoozeUntil&&a.snoozeUntil>todayStr())return null;const n=idle(a);if(n==null)return null;
+  if(n>=21)return{level:"bad",label:"Likely ghosted"};if(n>=7)return{level:"warn",label:"Follow up"};return null}
+function actionItems(){
+  const t=todayStr(),out=[];
+  for(const a of state.apps){
+    if(a.nextStep&&!CLOSED.has(a.status)){const due=a.nextDue;const dl=due?days(t,due):null;
+      out.push({a,kind:a.status==="Referral asked"?"referral":"step",lvl:dl!=null&&dl<=2?"urgent":dl!=null&&dl<=5?"soon":"info",t:`${a.company}: ${a.nextStep}`,d:a.role,when:due?(dl<0?`${-dl}d overdue`:dl===0?"today":`in ${dl}d`):"",sort:dl??50});}
+    const f=followState(a);
+    if(f&&!a.nextStep)out.push({a,kind:f.level==="bad"?"ghost":"follow",lvl:f.level==="bad"?"info":"soon",t:`${a.company}: ${f.label==="Follow up"?"follow up":"no reply in "+idle(a)+" days. Mark ghosted?"}`,d:`${a.role} · applied ${fmtD(a.dateApplied)}${a.poc&&a.poc.name?" · POC "+a.poc.name:" · no POC yet"}`,when:`${idle(a)}d idle`,sort:f.level==="bad"?40:20-idle(a)/10});
+    if(a.flagged)out.push({a,kind:"flag",lvl:"info",t:`Check: ${a.company}`,d:a.flagNote||"Updated by email sync",when:"synced",sort:10});
+  }
+  return out.sort((x,y)=>x.sort-y.sort);
+}
+
+/* ---------- render: pipeline ---------- */
+function renderKPIs(){
+  const A=state.apps, applied=A.filter(a=>!PRE.has(a.status)), active=A.filter(a=>!CLOSED.has(a.status)&&a.status!=="Offer");
+  const t=todayStr(), wk=applied.filter(a=>a.dateApplied&&days(a.dateApplied,t)<=7).length;
+  const resp=applied.filter(a=>RESPONDED.has(a.status)).length;
+  const live=A.filter(a=>["Assessment","Screening","Interviewing","Offer"].includes(a.status)).length;
+  const fu=A.filter(a=>followState(a)?.level==="warn").length;
+  const counts=s=>A.filter(a=>a.status===s).length;
+  const fseg=[["Applied","var(--accent)"],["Assessment","var(--warn)"],["Screening","var(--violet)"],["Interviewing","var(--good)"],["Rejected","var(--bad)"],["Ghosted","var(--faint)"]];
+  const tot=fseg.reduce((s,[k])=>s+counts(k),0)||1;
+  $("kpis").innerHTML=`
+   <div class="kpi"><div class="label">Active</div><div class="val">${active.length}</div><div class="hint">${A.filter(a=>PRE.has(a.status)).length} not yet applied</div></div>
+   <div class="kpi"><div class="label">Applied · 7 days</div><div class="val">${wk}</div><div class="hint">${applied.length} applied in total</div></div>
+   <div class="kpi"><div class="label">Response rate</div><div class="val">${applied.length?Math.round(resp/applied.length*100):0}<span style="font-size:16px">%</span></div><div class="hint">${resp} of ${applied.length} heard back</div></div>
+   <div class="kpi"><div class="label">In process</div><div class="val">${live}</div><div class="hint">assessment, screen or interview</div></div>
+   <div class="kpi"><div class="label">Follow-ups due</div><div class="val" style="color:${fu?"var(--warn)":"inherit"}">${fu}</div><div class="hint">quiet for 7–20 days</div>
+     <div class="funnel" title="Status mix">${fseg.map(([k,c])=>`<span style="width:${counts(k)/tot*100}%;background:${c}" title="${k}: ${counts(k)}"></span>`).join("")}</div></div>`;
+}
+function renderStageChips(){
+  const opts=["Active","All","Not applied","Applied","In process","Closed"];
+  $("stageChips").innerHTML=opts.map(o=>`<button class="chip" type="button" aria-pressed="${state.stage===o}" data-stage="${o}">${o}</button>`).join("");
+}
+function stageMatch(a){switch(state.stage){
+  case"Active":return!CLOSED.has(a.status);case"Not applied":return PRE.has(a.status);case"Applied":return a.status==="Applied";
+  case"In process":return["Assessment","Screening","Interviewing","Offer"].includes(a.status);case"Closed":return CLOSED.has(a.status);default:return true}}
+function sortVal(a,k){if(k==="age")return idle(a)??-1;if(k==="poc")return(a.poc?.name||a.referral||"").toLowerCase();if(k==="status")return STAGES.indexOf(a.status);return String(a[k]??"").toLowerCase()}
+function renderRows(){
+  const q=state.q.trim().toLowerCase();
+  let list=state.apps.filter(stageMatch).filter(a=>!q||[a.company,a.role,a.platform,a.poc?.name,a.referral,a.notes].join(" ").toLowerCase().includes(q));
+  const {k,dir}=state.sort;list.sort((x,y)=>{const a=sortVal(x,k),b=sortVal(y,k);return(a>b?1:a<b?-1:0)*dir});
+  $("appMeta").textContent=`${list.length} shown`;
+  $("rowsEmpty").hidden=state.apps.length>0;
+  $("rows").innerHTML=list.map(a=>{const n=idle(a),f=followState(a);
+    const pocTxt=a.poc?.name?esc(a.poc.name):a.referral?`<span class="tag">ref</span> ${esc(a.referral)}`:`<span class="small">—</span>`;
+    return`<tr data-id="${esc(a.id)}" class="${a.flagged?"flagged":""}">
+      <td><div class="co">${esc(a.company)} ${a.flagged?'<span class="flagtag" title="Updated by sync">● synced</span>':""}</div><div class="role" title="${esc(a.role)}">${esc(a.role)}</div></td>
+      <td onclick="event.stopPropagation()"><select class="inline" data-field="status" data-id="${esc(a.id)}" aria-label="Status for ${esc(a.company)}" ${canWrite?"":"disabled"}>${STAGES.map(s=>`<option ${s===a.status?"selected":""}>${s}</option>`).join("")}</select> <span class="pill ${cls(a.status)}" style="display:none">${esc(a.status)}</span></td>
+      <td class="mono">${fmtD(a.dateApplied)}</td>
+      <td><span class="age ${f?f.level:""}" title="${f?f.label:""}">${n==null?"—":n+"d"}</span></td>
+      <td class="small">${esc(a.platform||"—")}</td>
+      <td onclick="event.stopPropagation()"><select class="inline" data-field="cv" data-id="${esc(a.id)}" aria-label="CV for ${esc(a.company)}" ${canWrite?"":"disabled"}>${cvOpts(a.cv)}</select></td>
+      <td class="small">${pocTxt}</td></tr>`}).join("");
+  document.querySelectorAll("#rows select[data-field=status]").forEach(s=>{s.className="inline pill "+cls(s.value);});
+}
+function renderActions(){
+  const items=actionItems();$("actMeta").textContent=`${items.length} items`;
+  const BTN={step:[["done","Done"],["snooze2","+2 days"]],referral:[["refsent","Sent / replied"],["referred","Got referred"]],follow:[["followed","Followed up"],["snooze3","Snooze 3d"]],ghost:[["ghosted","Mark ghosted"],["followed","Followed up"]],flag:[["ack","Looks right"],["undo","Undo"]]};
+  $("actions").innerHTML=items.length?items.slice(0,14).map(i=>`<li data-id="${esc(i.a.id)}" style="cursor:pointer"><span class="bar ${i.lvl}"></span><div style="min-width:0"><div class="t">${esc(i.t)}</div><div class="d">${esc(i.d)}</div>${canWrite?`<div class="qa">${(BTN[i.kind]||[]).map(([k,l],n)=>`<button type="button" class="btn sm ${n?"ghost":""}" data-qa="${k}" data-id="${esc(i.a.id)}">${l}</button>`).join("")}</div>`:""}</div><span class="when">${esc(i.when)}</span></li>`).join(""):`<li class="empty" style="display:block">Nothing due. Follow-ups show up here 7 days after you apply.</li>`;
+}
+function convTable(el,keyFn,label){
+  const applied=state.apps.filter(a=>!PRE.has(a.status));const g={};
+  for(const a of applied){const k=keyFn(a)||"Not logged";(g[k]=g[k]||{n:0,r:0});g[k].n++;if(RESPONDED.has(a.status))g[k].r++;}
+  const rows=Object.entries(g).sort((a,b)=>b[1].n-a[1].n);const max=Math.max(1,...rows.map(r=>r[1].n));
+  el.innerHTML=`<thead><tr><th>${label}</th><th>Applied</th><th>Heard back</th><th>Rate</th></tr></thead><tbody>`+
+   (rows.length?rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td><div class="barcell"><span class="b" style="width:${v.n/max*90}px"></span><span class="mono">${v.n}</span></div></td><td class="mono">${v.r}</td><td class="mono">${Math.round(v.r/v.n*100)}%</td></tr>`).join(""):`<tr><td colspan="4" class="small">No applications yet.</td></tr>`)+"</tbody>";
+}
+
+/* ---------- render: jobs ---------- */
+function renderJobs(){
+  const now=Date.now(),win={"24h":1,"3d":3,"7d":7,"All":9999}[state.jobAge];
+  $("ageChips").innerHTML=["24h","3d","7d","All"].map(o=>`<button class="chip" type="button" aria-pressed="${state.jobAge===o}" data-age="${o}">${o}</button>`).join("");
+  ["fitToggle","wlToggle","dismissedToggle"].forEach((id,i)=>$(id).setAttribute("aria-pressed",[state.fitOnly,state.wlOnly,state.showDismissed][i]));
+  const wlset=new Set(state.watch.map(w=>w.name.toLowerCase()));
+  const isWl=j=>j.watchlist||wlset.has((j.company||"").toLowerCase());
+  const ref=j=>j.postedAt||j.foundAt;
+  let list=state.jobs.filter(j=>{const r=ref(j);const age=r?(now-new Date(r))/864e5:0;return age<=win})
+    .filter(j=>state.showDismissed||j.status!=="dismissed").filter(j=>!state.fitOnly||(j.fit??0)>=50).filter(j=>!state.wlOnly||isWl(j));
+  list.sort((a,b)=>(isWl(b)-isWl(a))||((b.fit??0)-(a.fit??0))||(String(ref(b)).localeCompare(String(ref(a)))));
+  const fresh=state.jobs.filter(j=>j.status!=="dismissed"&&ref(j)&&(now-new Date(ref(j)))/864e5<=1).length;
+  $("c-jobs").textContent=fresh;
+  $("jobMeta").textContent=`${list.length} shown · ${state.jobs.filter(j=>j.excluded).length} filtered as off-target`;
+  $("jobs").innerHTML=list.length?list.map(j=>{const f=j.fit??0,c=f>=70?"var(--good)":f>=50?"var(--accent)":"var(--faint)";
+    const ageH=ref(j)?Math.max(0,Math.round((now-new Date(ref(j)))/36e5)):null;
+    const applied=state.apps.some(a=>a.jobId===j.id);
+    return`<article class="job ${j.status==="dismissed"?"dim":""}" data-jid="${esc(j.id)}">
+     <div class="fit" style="--p:${f};--c:${c}" title="Fit score"><b>${f}</b></div>
+     <div style="min-width:0"><h3>${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a>`:esc(j.title)} ${ageH!=null&&ageH<=24?'<span class="new-badge">NEW</span>':""}</h3>
+      <div class="row2"><span class="co" style="color:var(--fg)">${esc(j.company)}</span>${isWl(j)?'<span class="tag">watchlist</span>':""}<span>${esc(j.location||"")}</span><span class="tag">${esc(j.source||"")}</span>${ageH!=null?`<span class="mono">${ageH<24?ageH+"h ago":Math.round(ageH/24)+"d ago"}</span>`:""}${j.recruiter?`<span>· recruiter: ${esc(j.recruiter)}</span>`:""}</div>
+      ${j.fitWhy?`<div class="why">${esc(j.fitWhy)}</div>`:""}</div>
+     <div class="acts">${applied?'<span class="pill s-Applied">Tracked</span>':`<button class="btn sm" data-jact="track" type="button" ${canWrite?"":"disabled"}>Track</button>`}
+      <button class="btn sm ghost" data-jact="poc" type="button" ${canWrite?"":"disabled"}>Find POC</button>
+      <button class="btn sm ghost" data-jact="${j.status==="dismissed"?"restore":"dismiss"}" type="button" ${canWrite?"":"disabled"}>${j.status==="dismissed"?"Restore":"Dismiss"}</button></div></article>`}).join("")
+    :`<div class="empty">No roles in this window. ${state.jobs.length?"Try 3d or All, or turn off the fit filter.":"The next sync adds roles posted in the last 24 hours."}</div>`;
+  $("wlMeta").textContent=`${state.watch.length} companies`;
+  $("wl").innerHTML=state.watch.length?state.watch.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(w=>`<span class="chip">${esc(w.name)}${canWrite?`<button type="button" data-wl-del="${esc(w.id)}" aria-label="Remove ${esc(w.name)}">×</button>`:""}</span>`).join(""):`<span class="small">Add the companies you'd move for. They rank first in New roles.</span>`;
+}
+
+/* ---------- render: outreach ---------- */
+function renderOutreach(){
+  const opts=[...state.apps.filter(a=>!CLOSED.has(a.status)).map(a=>({v:"app:"+a.id,l:`${a.company} · ${a.role}`})),...state.jobs.filter(j=>j.status!=="dismissed").map(j=>({v:"job:"+j.id,l:`[new] ${j.company} · ${j.title}`}))];
+  $("pocTarget").innerHTML=opts.map(o=>`<option value="${esc(o.v)}">${esc(o.l)}</option>`).join("");
+  const P=state.poc.slice().sort((a,b)=>String(b.requestedAt).localeCompare(String(a.requestedAt)));
+  $("pocMeta").textContent=`${P.filter(p=>p.status==="queued").length} queued`;
+  $("pocList").innerHTML=P.length?P.map(p=>`<li><span class="bar ${p.status==="queued"?"soon":p.status==="done"?"info":""}"></span><div><div class="t">${esc(p.label)}</div>
+     ${(p.results||[]).map(r=>`<div class="d" style="margin-top:4px"><span class="conf ${esc(r.confidence)}">${esc(r.confidence)}</span> <b style="color:var(--fg)">${esc(r.name)}</b> · ${esc(r.title||"")}${r.url?` · <a href="${esc(r.url)}" target="_blank" rel="noopener">profile</a>`:""}${r.why?`<br><span>${esc(r.why)}</span>`:""}</div>`).join("")}
+     ${p.draft?`<details style="margin-top:6px"><summary class="small" style="cursor:pointer">Draft note</summary><div class="d" style="white-space:pre-wrap;margin-top:4px">${esc(p.draft)}</div><button class="btn sm" type="button" data-copy="${esc(p.id)}" style="margin-top:6px">Copy</button></details>`:""}
+     ${p.status==="queued"?`<div class="d">Waiting for the next sync</div>`:""}</div><span class="when">${esc(p.status)}</span></li>`).join(""):`<li class="empty" style="display:block">No POC searches yet.</li>`;
+  const out=[];
+  for(const a of state.apps){if(a.referral&&!CLOSED.has(a.status))out.push({a,date:a.dateApplied||"",t:`Referral: ${a.referral}`,d:`${a.company} · ${a.status}`,lvl:a.status==="Referral asked"?"soon":"info"});
+    (a.outreach||[]).forEach((o,oi)=>out.push({a,oi,replied:o.replied,date:o.date||"",t:`${o.who||"Contact"} · ${o.channel||""}`,d:`${a.company}: ${o.note||""}${o.replied?" · replied":""}`,lvl:o.replied?"info":"soon"}));}
+  out.sort((x,y)=>String(y.date).localeCompare(String(x.date)));
+  $("outMeta").textContent=`${out.length} entries`;$("c-out").textContent=out.length;
+  $("outList").innerHTML=out.length?out.map(i=>`<li data-id="${esc(i.a.id)}" style="cursor:pointer"><span class="bar ${i.lvl}"></span><div style="min-width:0"><div class="t">${esc(i.t)}</div><div class="d">${esc(i.d)}</div>${i.oi!=null&&!i.replied&&canWrite?`<div class="qa"><button type="button" class="btn sm" data-rep="${i.oi}" data-id="${esc(i.a.id)}">They replied</button></div>`:""}</div><span class="when">${fmtD(i.date)}</span></li>`).join(""):`<li class="empty" style="display:block">Log referral asks and messages from an application's panel.</li>`;
+}
+
+/* ---------- interviews ---------- */
+const IST={timeZone:"Asia/Kolkata"};
+const fmtDT=(iso,o)=>new Date(iso).toLocaleString("en-IN",{...IST,...o});
+function allRounds(){
+  const out=[];const now=Date.now();
+  for(const a of state.apps)(a.rounds||[]).forEach((r,i)=>{
+    const st=r.start?new Date(r.start).getTime():null,en=r.end?new Date(r.end).getTime():(st!=null?st+36e5:null);
+    let bucket="Past";
+    if(r.status==="cancelled")bucket="Cancelled";
+    else if(r.status==="awaiting"||st==null)bucket="Awaiting";
+    else if(r.status!=="done"&&en>now)bucket="Upcoming";
+    out.push({a,r,i,st,en,bucket});});
+  return out;
+}
+function relTime(st){const h=(st-Date.now())/36e5;
+  if(h<0)return{t:"now",c:"soon"};if(h<1)return{t:`in ${Math.max(1,Math.round(h*60))} min`,c:"soon"};
+  if(h<24)return{t:`in ${Math.round(h)} h`,c:"soon"};const d=Math.round(h/24);return{t:`in ${d} day${d>1?"s":""}`,c:d<=3?"near":"later"}}
+const gstamp=t=>new Date(t).toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+function gcalUrl(x){if(x.st==null)return"";const p=new URLSearchParams({action:"TEMPLATE",text:`${x.a.company}: ${x.r.title||"Interview"}`,dates:`${gstamp(x.st)}/${gstamp(x.en)}`,details:[x.r.with?"With "+x.r.with:"",x.r.joinUrl?"Join: "+x.r.joinUrl:"",x.r.prep||""].filter(Boolean).join("\n\n"),location:x.r.joinUrl||x.r.mode||""});return"https://calendar.google.com/calendar/render?"+p}
+function roundCard(x){
+  const {a,r}=x,ro=!canWrite?"disabled":"";const up=x.bucket==="Upcoming";const rel=up&&x.st?relTime(x.st):null;
+  const day=x.st?fmtDT(x.st,{day:"numeric"}):"—",mon=x.st?fmtDT(x.st,{month:"short",weekday:"short"}):"No slot yet";
+  const tm=x.st?`${fmtDT(x.st,{hour:"numeric",minute:"2-digit"})}${r.end?" – "+fmtDT(x.en,{hour:"numeric",minute:"2-digit"}):""}`:"";
+  const kind=r.kind==="assessment"?"Due":"";
+  return`<article class="round ${up?"":"past"}" data-aid="${esc(a.id)}" data-ri="${x.i}">
+   <div class="when-box"><span class="mm">${esc(kind?kind+" · ":"")}${esc(mon)}</span><span class="dd">${esc(day)}</span>${tm?`<span class="tt">${esc(tm)} IST</span>`:""}${rel?`<span class="rel ${rel.c}">${esc(rel.t)}</span>`:x.bucket==="Awaiting"?'<span class="rel near">to schedule</span>':""}</div>
+   <div style="min-width:0">
+    <h3>${esc(a.company)} · ${esc(r.title||"Interview")}</h3>
+    <div class="meta-row"><span class="pill ${cls(a.status)}">${esc(a.status)}</span><span>${esc(a.role)}</span>${r.mode?`<span class="tag">${esc(r.mode)}</span>`:""}${r.status==="done"?'<span class="tag">done</span>':""}${r.status==="cancelled"?'<span class="tag">cancelled</span>':""}</div>
+    <dl class="kv">
+     ${r.with?`<dt>With</dt><dd>${esc(r.with)}</dd>`:""}
+     ${r.joinUrl?`<dt>Meeting link</dt><dd><a href="${esc(r.joinUrl)}" target="_blank" rel="noopener">${esc(r.mode||"Join")} ↗</a></dd>`:""}
+     ${r.contact||a.poc?.contact?`<dt>Questions to</dt><dd>${esc(r.contactName||a.poc?.name||"")} <span class="mono" style="user-select:all">${esc(r.contact||a.poc?.contact)}</span></dd>`:""}
+     <dt>Source</dt><dd>${r.sourceUrl||a.mailUrl?`<a href="${esc(r.sourceUrl||a.mailUrl)}" target="_blank" rel="noopener">Open email ↗</a> `:""}<span class="small">${esc(r.sourceNote||"")}</span></dd>
+     ${a.link?`<dt>Job post</dt><dd><a href="${esc(a.link)}" target="_blank" rel="noopener">View posting ↗</a></dd>`:""}
+     ${r.outcome?`<dt>Outcome</dt><dd>${esc(r.outcome)}</dd>`:""}
+    </dl>
+    ${r.prep?`<div class="prep">${esc(r.prep)}</div>`:""}
+    <div class="acts">
+     ${up&&r.joinUrl?`<a class="btn sm primary" href="${esc(r.joinUrl)}" target="_blank" rel="noopener">Join</a>`:""}
+     ${up&&x.st?`<a class="btn sm" href="${esc(gcalUrl(x))}" target="_blank" rel="noopener">Add to Google Calendar</a>`:""}
+     ${canWrite&&r.status!=="done"&&r.status!=="cancelled"?`<button class="btn sm" type="button" data-rd="done">Mark done</button><button class="btn sm ghost" type="button" data-rd="cancelled">Cancelled</button>`:""}
+     ${canWrite?`<details style="flex-basis:100%"><summary class="small" style="cursor:pointer">${r.outcome?"Edit outcome":"Log how it went"}</summary><div style="display:grid;gap:6px;margin-top:6px"><textarea id="oc-${esc(a.id)}-${x.i}" class="search" style="width:100%;min-height:60px" placeholder="Questions asked, what went well, next step promised" ${ro}>${esc(r.outcome||"")}</textarea><div><button class="btn sm" type="button" data-rd="outcome">Save outcome</button></div></div></details>`:""}
+     <button class="btn sm ghost" type="button" data-rd="open">Open application</button>
+    </div>
+   </div></article>`;
+}
+function renderInterviews(){
+  const R=allRounds();const cnt=k=>R.filter(x=>x.bucket===k).length;
+  const opts=["Upcoming","Awaiting","Past","All"];
+  $("intChips").innerHTML=opts.map(o=>`<button class="chip" type="button" aria-pressed="${state.intFilter===o}" data-if="${o}">${o}${o!=="All"?` · ${cnt(o)}`:""}</button>`).join("");
+  $("c-int").textContent=cnt("Upcoming")+cnt("Awaiting");
+  let list=state.intFilter==="All"?R:R.filter(x=>x.bucket===state.intFilter);
+  list.sort((x,y)=>state.intFilter==="Past"?(y.st||0)-(x.st||0):(x.st??9e15)-(y.st??9e15));
+  $("intMeta").textContent=`${cnt("Upcoming")} upcoming · ${cnt("Awaiting")} to schedule`;
+  $("roundList").innerHTML=list.length?`<div class="rounds">${list.map(roundCard).join("")}</div>`:`<div class="empty">${state.intFilter==="Upcoming"?"No rounds scheduled. When an invite lands in Gmail, the next sync adds it here with the meeting link.":"Nothing here."}</div>`;
+}
+function renderNextUp(){
+  const up=allRounds().filter(x=>x.bucket==="Upcoming").sort((a,b)=>a.st-b.st);const aw=allRounds().filter(x=>x.bucket==="Awaiting").length;
+  if(!up.length){$("nextUp").innerHTML=aw?`<div class="nextup" style="border-left-color:var(--warn)"><div class="clock">${aw}<small>to schedule</small></div><div class="small">Rounds waiting for a slot. See Interviews.</div><button class="btn sm" type="button" data-goto="interviews">Open Interviews</button></div>`:"";return}
+  const x=up[0],rel=relTime(x.st);
+  $("nextUp").innerHTML=`<div class="nextup"><div class="clock">${esc(rel.t.replace(/^in /,""))}<small>next round</small></div>
+   <div style="min-width:0"><div class="t" style="font-weight:600">${esc(x.a.company)} · ${esc(x.r.title||"Interview")}</div><div class="small">${esc(fmtDT(x.st,{weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}))} IST${x.r.with?" · with "+esc(x.r.with):""}${x.r.mode?" · "+esc(x.r.mode):""}${up.length>1?` · ${up.length-1} more upcoming`:""}</div></div>
+   <div class="qa" style="margin:0">${x.r.joinUrl?`<a class="btn sm primary" href="${esc(x.r.joinUrl)}" target="_blank" rel="noopener">Join</a>`:""}${x.r.sourceUrl||x.a.mailUrl?`<a class="btn sm" href="${esc(x.r.sourceUrl||x.a.mailUrl)}" target="_blank" rel="noopener">Invite email</a>`:""}<button class="btn sm ghost" type="button" data-goto="interviews">All rounds</button></div></div>`;
+}
+async function roundAction(aid,ri,k){
+  const a=state.apps.find(x=>x.id===aid);if(!a)return;if(k==="open"){openDrawer(aid);return}
+  const R=(a.rounds||[]).map(r=>({...r}));const r=R[ri];if(!r)return;const t=todayStr();
+  if(k==="done"||k==="cancelled"){r.status=k;await patchApp(aid,{rounds:R,lastActivity:t,history:[...(a.history||[]),{date:t,status:a.status,note:`${r.title||"Round"} marked ${k} on dashboard`}],updatedBy:"dashboard"},k==="done"?"Round marked done":"Round marked cancelled")}
+  if(k==="outcome"){const el=$(`oc-${aid}-${ri}`);r.outcome=el?el.value.trim():"";await patchApp(aid,{rounds:R,updatedBy:"dashboard"},"Outcome saved")}
+}
+
+/* ---------- auto-apply ---------- */
+const AA_DEF={enabled:false,fitBar:75,dailyCap:5,platforms:["Ashby","Greenhouse","Lever","Workable"],exclude:""};
+const PROFILE_FIELDS=[
+ ["Contact",[["fullName","Full name"],["email","Email"],["phone","Phone"],["city","Current city"],["linkedin","LinkedIn URL"],["portfolio","Portfolio or GitHub URL"]]],
+ ["Work",[["currentCompany","Current or last company"],["currentTitle","Current or last title"],["totalYears","Total experience (years)"],["pmYears","Product experience (years)"],["noticePeriod","Notice period"],["lastWorkingDay","Last working day or earliest start"],["currentCtc","Current CTC (INR LPA)"],["expectedCtc","Expected CTC (INR LPA)"]]],
+ ["Eligibility",[["workAuthIndia","Authorised to work in India",["","Yes","No"]],["needSponsorship","Needs visa sponsorship",["","No","Yes"]],["relocate","Open to relocation",["","Yes","No","Depends on role"]],["locations","Preferred locations"],["workMode","Work mode",["","Any","Remote","Hybrid","On-site"]]]],
+ ["Education",[["ug","Undergraduate"],["pg","Postgraduate"]]],
+ ["Voluntary questions",[["gender","Gender",["Prefer not to say","Male","Female","Non-binary"]],["disability","Disability",["Prefer not to say","No","Yes"]]]],
+ ["CVs",[["defaultCv","Default CV",["PM Core","AI PM"]],["aiCv","CV for AI / GenAI roles",["AI PM","PM Core"]]]],
+ ["Standard answers",[["headline","One-line headline","ta"],["pitch","Short intro (about 60 words)","ta"],["whyNow","Why you are looking now","ta"],["achievement","Proudest product achievement","ta"],["whyPM","Why product management","ta"],["heardFrom","How did you hear about us (default)"]]]
+];
+const ALLKEYS=PROFILE_FIELDS.flatMap(([,f])=>f.map(x=>x[0]));
+const profRef=()=>db&&state.uid?db.collection("data/users/"+state.uid).doc("profile"):null;
+function profileFill(p){if(!p)return{n:0,t:ALLKEYS.length};return{n:ALLKEYS.filter(k=>String(p[k]??"").trim()).length,t:ALLKEYS.length}}
+function renderApply(){
+  const p=state.profile,aa={...AA_DEF,...(p?.autoApply||{})},ro=!canWrite||!profRef()?"disabled":"";const f=profileFill(p);
+  $("profBox").innerHTML=!db?`<div class="small">Open on claude.ai while signed in to see your profile.</div>`:!state.uid?`<div class="small">Your profile is private to you and needs a signed-in view.</div>`:
+   `${p?.vetted?`<div class="vet ok">Vetted on ${esc(fmtD((p.vettedAt||"").slice(0,10)))}. Auto-apply uses these answers as written.</div>`:`<div class="vet no">Not vetted yet. Auto-apply stays off until you check every field and tick the confirmation.</div>`}
+    <div class="small">${f.n} of ${f.t} fields filled. Drafted from your PM Core CV and work context. Only you can see this profile.</div>
+    <div><button class="btn primary sm" type="button" id="editProf" ${ro}>Review profile</button></div>`;
+  $("ruleForm").innerHTML=`<label class="switch"><input type="checkbox" id="aa-on" ${aa.enabled?"checked":""} ${ro} ${p?.vetted?"":"disabled"}> Auto-submit at each sync</label>
+   ${p?.vetted?"":`<div class="small">Unlocks after you vet your profile.</div>`}
+   <div class="fgrid"><div class="field"><label for="aa-fit">Fit bar</label><input id="aa-fit" type="number" min="50" max="100" value="${esc(aa.fitBar)}" ${ro}></div>
+   <div class="field"><label for="aa-cap">Max per day</label><input id="aa-cap" type="number" min="1" max="20" value="${esc(aa.dailyCap)}" ${ro}></div></div>
+   <div class="field"><label>Portals</label><div class="checks">${["Ashby","Greenhouse","Lever","Workable"].map(x=>`<label><input type="checkbox" data-plat="${x}" ${aa.platforms.includes(x)?"checked":""} ${ro}> ${x}</label>`).join("")}</div></div>
+   <div class="field"><label for="aa-ex">Never auto-apply to</label><input id="aa-ex" value="${esc(aa.exclude||"")}" placeholder="Company names, comma separated" ${ro}></div>
+   <div><button class="btn sm" type="submit" ${ro}>Save rules</button></div>`;
+  const Q=state.applyq;const grp=q=>q.status==="review"?"Needs you":["drafted","approved","submitting"].includes(q.status)?"Queued":q.status==="submitted"?"Submitted":q.status==="manual"?"Manual":q.status==="failed"?"Needs you":"Skipped";
+  const opts=["Needs you","Queued","Manual","Submitted","All"];
+  $("aqChips").innerHTML=opts.map(o=>`<button class="chip" type="button" aria-pressed="${state.aqFilter===o}" data-aq="${o}">${o}${o!=="All"?` · ${Q.filter(q=>grp(q)===o).length}`:""}</button>`).join("");
+  $("c-apply").textContent=Q.filter(q=>grp(q)==="Needs you").length;
+  $("aqMeta").textContent=`${Q.filter(q=>q.status==="submitted").length} submitted`;
+  let list=state.aqFilter==="All"?Q:Q.filter(q=>grp(q)===state.aqFilter);
+  list=list.slice().sort((a,b)=>(b.fit??0)-(a.fit??0));
+  $("aqList").innerHTML=list.length?list.map(q=>{const fv=q.fit??0,c=fv>=70?"var(--good)":fv>=50?"var(--accent)":"var(--faint)";const lbl={review:"Needs review",drafted:"Queued",approved:"Approved",submitting:"Submitting",submitted:"Submitted",failed:"Failed",skipped:"Skipped",manual:"Apply yourself"}[q.status]||q.status;
+    const editable=canWrite&&["review","drafted","approved","failed","manual"].includes(q.status);
+    return`<div class="q-item" data-qid="${esc(q.id)}"><div class="top"><div class="fit" style="--p:${fv};--c:${c}"><b>${fv}</b></div>
+      <div style="min-width:0"><h3 style="margin:0;font-size:14px">${q.url?`<a href="${esc(q.url)}" target="_blank" rel="noopener">${esc(q.title)}</a>`:esc(q.title)}</h3>
+       <div class="row2" style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:3px"><span class="co" style="color:var(--fg)">${esc(q.company)}</span><span class="tag">${esc(q.ats||"")}</span>${q.location?`<span>${esc(q.location)}</span>`:""}${q.submittedAt?`<span class="mono">sent ${esc(fmtD(q.submittedAt.slice(0,10)))}</span>`:""}</div></div>
+      <span class="pill st-${esc(q.status)}">${esc(lbl)}</span></div>
+     ${q.reason?`<div class="reason">${esc(q.reason)}</div>`:""}${q.error?`<div class="reason" style="color:var(--bad)">${esc(q.error)}</div>`:""}
+     <div class="field" style="max-width:220px"><label for="cv-${esc(q.id)}">CV</label><select id="cv-${esc(q.id)}" ${editable?"":"disabled"}>${["PM Core","AI PM"].map(x=>`<option ${normCV(q.cv)===x?"selected":""}>${x}</option>`).join("")}</select></div>
+     ${(q.answers||[]).length?`<details ${q.status==="review"?"open":""}><summary class="small" style="cursor:pointer">${q.answers.length} written answer${q.answers.length>1?"s":""}</summary><div style="display:grid;gap:10px;margin-top:8px">${q.answers.map((x,i)=>`<div class="ans"><label for="ans-${esc(q.id)}-${i}">${esc(x.q)}</label><textarea id="ans-${esc(q.id)}-${i}" ${editable?"":"disabled"}>${esc(x.a||"")}</textarea></div>`).join("")}</div></details>`:""}
+     ${editable?`<div class="qa">${q.status==="manual"?`<button class="btn sm primary" type="button" data-qa2="iapplied">I applied</button>`:`<button class="btn sm primary" type="button" data-qa2="approve">${q.status==="approved"?"Save changes":"Approve, submit at next sync"}</button>`}<button class="btn sm ghost" type="button" data-qa2="skip">Skip</button></div>`:""}</div>`}).join("")
+   :`<div class="empty">${state.aqFilter==="Needs you"?"Nothing needs you. The next sync prepares applications for new roles with a direct Ashby, Greenhouse, Lever or Workable link.":"Nothing here yet."}</div>`;
+}
+function readQ(q){return{cv:$("cv-"+q.id)?.value||q.cv,answers:(q.answers||[]).map((x,i)=>({...x,a:$(`ans-${q.id}-${i}`)?.value??x.a,needsReview:false}))}}
+async function queueAction(qid,k){
+  const q=state.applyq.find(x=>x.id===qid);if(!q||!db)return;const now=new Date().toISOString();
+  try{
+    if(k==="approve"){await db.doc("applyq/"+qid).update({...readQ(q),status:"approved",approvedAt:now,updatedBy:"dashboard"});toast(`${q.company} approved. It goes out at the next sync`)}
+    if(k==="skip"){await db.doc("applyq/"+qid).update({status:"skipped",updatedBy:"dashboard"});toast("Skipped")}
+    if(k==="iapplied"){const v=readQ(q);const id=(q.company+"-"+q.title).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)+"-"+Math.random().toString(36).slice(2,6);const t=todayStr();
+      await db.doc("apps/"+id).set({id,company:q.company,role:q.title,status:"Applied",dateApplied:t,lastActivity:t,platform:q.ats||"Company portal",cv:v.cv,link:q.url||"",jobId:q.jobId||"",poc:{},referral:"",nextStep:"",nextDue:"",notes:"",history:[{date:t,status:"Applied",note:"Applied manually from the apply queue"}],outreach:[],source:"manual",flagged:false,updatedBy:"dashboard"});
+      await db.doc("applyq/"+qid).update({...v,status:"submitted",via:"manual",appId:id,submittedAt:now,updatedBy:"dashboard"});toast(`${q.company} logged as Applied`)}
+  }catch(e){handleWriteErr(e)}
+}
+function openProfile(){
+  const ref=profRef();if(!ref)return;const p=state.profile||{};const ro=!canWrite?"disabled":"";
+  const fld=([k,l,t])=>{const v=p[k]??"";const id="p-"+k;
+    if(Array.isArray(t))return`<div class="field"><label for="${id}">${esc(l)}</label><select id="${id}" ${ro}>${(t.includes(v)?t:[v,...t]).map(o=>`<option value="${esc(o)}" ${o===v?"selected":""}>${esc(o||"—")}</option>`).join("")}</select></div>`;
+    if(t==="ta")return`<div class="field full"><label for="${id}">${esc(l)}</label><textarea id="${id}" ${ro}>${esc(v)}</textarea></div>`;
+    return`<div class="field"><label for="${id}">${esc(l)}</label><input id="${id}" value="${esc(v)}" ${ro}></div>`};
+  $("drawerRoot").innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Your application profile">
+   <div class="drawer-h"><div style="flex:1;min-width:0"><div class="small">Used to fill application forms</div><h2>Your profile</h2></div><button class="btn ghost" data-close type="button" aria-label="Close">✕</button></div>
+   <form class="drawer-b" id="profForm">
+    <div class="small">Drafted from your PM Core CV and work context. Empty fields are ones only you can answer. Check every line, then tick the confirmation at the bottom.</div>
+    ${PROFILE_FIELDS.map(([s,f])=>`<div class="sect"><h4>${esc(s)}</h4><div class="fgrid">${f.map(fld).join("")}</div>${s==="CVs"?`<div class="small" style="margin-top:6px">PM Core and AI PM are the two CVs in use. The B2C and Trail variants are retired.</div>`:""}</div>`).join("")}
+    <label class="switch" style="font-weight:500"><input type="checkbox" id="p-vetted" ${p.vetted?"checked":""} ${ro}> I've checked every field and these answers can be submitted for me</label>
+   </form>
+   <div class="drawer-f"><button class="btn" data-close type="button">Cancel</button><button class="btn primary" type="submit" form="profForm" ${ro}>Save profile</button></div></aside>`;
+  const close=()=>{$("drawerRoot").innerHTML=""};$("drawerRoot").querySelectorAll("[data-close]").forEach(b=>b.onclick=close);
+  $("profForm").onsubmit=async e=>{e.preventDefault();const v={};ALLKEYS.forEach(k=>{const el=$("p-"+k);if(el)v[k]=el.value.trim()});
+    const vetted=$("p-vetted").checked;const aa={...AA_DEF,...(p.autoApply||{})};if(!vetted)aa.enabled=false;
+    try{await ref.set({...p,...v,vetted,vettedAt:vetted?(p.vetted?p.vettedAt:new Date().toISOString()):"",autoApply:aa,updatedAt:new Date().toISOString(),updatedBy:"dashboard"});toast(vetted?"Profile saved and vetted":"Profile saved. Not vetted yet");close()}catch(err){handleWriteErr(err)}};
+}
+
+function renderSync(){
+  const m=state.meta;const el=$("sync");
+  if(!db){el.innerHTML=`<span class="dot"></span><span>Offline view</span>`;return}
+  if(!m||!m.lastRun){el.innerHTML=`<span class="dot"></span><span>No sync yet</span>`;return}
+  const h=(Date.now()-new Date(m.lastRun))/36e5;
+  el.innerHTML=`<span class="dot ${h<9?"ok":"stale"}"></span><span title="${esc(m.summary||"")}">Synced ${h<1?Math.round(h*60)+"m":Math.round(h)+"h"} ago${m.nextRun?" · next "+new Date(m.nextRun).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"}):""}</span>`;
+}
+function render(){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===state.tab));
+  TABS.forEach(t=>$("view-"+t).hidden=state.tab!==t);
+  $("c-pipe").textContent=state.apps.filter(a=>!CLOSED.has(a.status)).length;
+  renderSync();renderNextUp();renderKPIs();renderStageChips();renderRows();renderActions();renderInterviews();renderApply();
+  convTable($("cvTable"),a=>normCV(a.cv),"CV variant");convTable($("chTable"),a=>PLATFORM_GROUP(a.platform),"Channel");
+  renderJobs();renderOutreach();
+}
+
+/* ---------- writes ---------- */
+async function patchApp(id,patch,msg){
+  if(!db){toast("Can't save: the database isn't connected in this view");return}
+  const a=state.apps.find(x=>x.id===id);if(!a)return;
+  try{await db.doc("apps/"+id).update(patch);if(msg)toast(msg)}catch(e){handleWriteErr(e)}
+}
+function handleWriteErr(e){if(e&&e.code==="invalid_argument"){canWrite=false;render();toast("You have view-only access here")}else toast("Couldn't save. Try again in a moment.")}
+async function setStatus(id,status){
+  const a=state.apps.find(x=>x.id===id);if(!a||a.status===status)return;const t=todayStr();
+  const history=[...(a.history||[]),{date:t,status,note:"Changed on dashboard"}];
+  const patch={status,lastActivity:t,history,flagged:false,updatedAt:new Date().toISOString(),updatedBy:"dashboard"};
+  if(status==="Applied"&&!a.dateApplied)patch.dateApplied=t;
+  await patchApp(id,patch,`${a.company} → ${status}`);
+}
+
+/* ---------- drawer ---------- */
+function openDrawer(id,isNew,prefill){
+  const a=isNew?{id:"",company:"",role:"",status:"Applied",dateApplied:todayStr(),platform:"",cv:"",poc:{},referral:"",link:"",nextStep:"",nextDue:"",notes:"",history:[],outreach:[],...(prefill||{})}:state.apps.find(x=>x.id===id);
+  if(!a)return;const ro=!canWrite?"disabled":"";
+  $("drawerRoot").innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${isNew?"New application":esc(a.company)}">
+   <div class="drawer-h"><div style="flex:1;min-width:0"><div class="small">${isNew?"New application":esc(a.platform||"")}</div><h2>${isNew?"Add application":esc(a.company)}</h2>${!isNew?`<div class="small">${esc(a.role)}</div>`:""}</div><button class="btn ghost" data-close type="button" aria-label="Close">✕</button></div>
+   <form class="drawer-b" id="appForm">
+    ${a.flagged?`<div class="flagbox"><span>${esc(a.flagNote||"Updated by email sync")}</span><button class="btn sm" type="button" id="ackFlag">Looks right</button></div>`:""}
+    <div class="fgrid">
+     <div class="field"><label for="f-company">Company</label><input id="f-company" required value="${esc(a.company)}" ${ro}></div>
+     <div class="field"><label for="f-role">Role</label><input id="f-role" required value="${esc(a.role)}" ${ro}></div>
+     <div class="field"><label for="f-status">Status</label><select id="f-status" ${ro}>${STAGES.map(s=>`<option ${s===a.status?"selected":""}>${s}</option>`).join("")}</select></div>
+     <div class="field"><label for="f-date">Date applied</label><input id="f-date" type="date" value="${esc(a.dateApplied||"")}" ${ro}></div>
+     <div class="field"><label for="f-platform">Platform</label><input id="f-platform" list="platforms" value="${esc(a.platform||"")}" ${ro}><datalist id="platforms">${["LinkedIn Easy Apply","Company portal","Ashby","Greenhouse","Lever","Workday","Referral","Founder intro","Recruiter email","hirist.tech","Instahyre","Wellfound","Naukri"].map(p=>`<option>${p}</option>`).join("")}</datalist></div>
+     <div class="field"><label for="f-cv">CV sent</label><select id="f-cv" ${ro}>${cvOpts(a.cv)}</select></div>
+     <div class="field"><label for="f-pocname">POC name</label><input id="f-pocname" value="${esc(a.poc?.name||"")}" ${ro}></div>
+     <div class="field"><label for="f-poccontact">POC contact</label><input id="f-poccontact" value="${esc(a.poc?.contact||"")}" placeholder="email or LinkedIn URL" ${ro}></div>
+     <div class="field"><label for="f-ref">Referral / intro by</label><input id="f-ref" value="${esc(a.referral||"")}" ${ro}></div>
+     <div class="field"><label for="f-link">Job link</label><input id="f-link" value="${esc(a.link||"")}" ${ro}></div>
+     <div class="field"><label for="f-next">Next step</label><input id="f-next" value="${esc(a.nextStep||"")}" ${ro}></div>
+     <div class="field"><label for="f-due">Due</label><input id="f-due" type="date" value="${esc(a.nextDue||"")}" ${ro}></div>
+     <div class="field full"><label for="f-notes">Notes</label><textarea id="f-notes" ${ro}>${esc(a.notes||"")}</textarea></div>
+    </div>
+    ${a.poc?.name&&a.poc?.source?`<div class="small">POC source: ${esc(a.poc.source)} ${a.poc.confidence?`<span class="conf ${esc(a.poc.confidence)}">${esc(a.poc.confidence)}</span>`:""}</div>`:""}
+    ${!isNew?`<div class="sect"><h4>Outreach log</h4>
+      <ul class="timeline">${(a.outreach||[]).map(o=>`<li><span class="mono">${fmtD(o.date)}</span> · <b>${esc(o.who||"")}</b> via ${esc(o.channel||"")}: ${esc(o.note||"")} ${o.replied?'<span class="pill s-Interviewing">replied</span>':""}</li>`).join("")||'<li class="small">Nothing logged</li>'}</ul>
+      <div class="fgrid" style="margin-top:8px">
+       <div class="field"><label for="o-who">Who</label><input id="o-who" ${ro}></div>
+       <div class="field"><label for="o-ch">Channel</label><select id="o-ch" ${ro}><option>LinkedIn DM</option><option>Email</option><option>Referral ask</option><option>WhatsApp</option><option>Call</option></select></div>
+       <div class="field full"><label for="o-note">Note</label><input id="o-note" placeholder="e.g. asked for referral, sent CV" ${ro}></div>
+       <div class="field full" style="display:flex;gap:8px;flex-direction:row;align-items:center"><label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--fg)"><input type="checkbox" id="o-rep" style="width:auto" ${ro}> They replied</label><button class="btn sm" type="button" id="addOut" ${ro}>Log outreach</button></div>
+      </div></div>
+     <div class="sect"><h4>Rounds</h4>
+      <ul class="timeline">${(a.rounds||[]).map(r=>`<li><span class="mono">${r.start?esc(fmtDT(r.start,{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})):"no slot"}</span> · <b>${esc(r.title||"Round")}</b>${r.with?" with "+esc(r.with):""} <span class="small">· ${esc(r.status||"scheduled")}</span></li>`).join("")||'<li class="small">No rounds yet</li>'}</ul>
+      <div class="fgrid" style="margin-top:8px">
+       <div class="field"><label for="r-title">Round</label><input id="r-title" placeholder="e.g. Round 2 · Hiring manager" ${ro}></div>
+       <div class="field"><label for="r-start">Date and time (IST)</label><input id="r-start" type="datetime-local" ${ro}></div>
+       <div class="field"><label for="r-mode">Format</label><input id="r-mode" list="modes" placeholder="Google Meet" ${ro}><datalist id="modes"><option>Google Meet</option><option>MS Teams</option><option>Zoom</option><option>Phone</option><option>In person</option><option>Take-home</option></datalist></div>
+       <div class="field"><label for="r-with">With</label><input id="r-with" ${ro}></div>
+       <div class="field full"><label for="r-join">Meeting link</label><input id="r-join" placeholder="https://" ${ro}></div>
+       <div class="field full"><label for="r-prep">Prep notes</label><input id="r-prep" ${ro}></div>
+       <div class="field full"><button class="btn sm" type="button" id="addRound" ${ro}>Add round</button></div>
+      </div></div>
+     <div class="sect"><h4>History</h4><ul class="timeline">${(a.history||[]).map(h=>`<li><span class="mono">${fmtD(h.date)}</span> · ${esc(h.status)}${h.note?` <span class="small">· ${esc(h.note)}</span>`:""}</li>`).join("")||'<li class="small">No history</li>'}</ul></div>
+     ${a.mailUrl?`<a class="small" href="${esc(a.mailUrl)}" target="_blank" rel="noopener">Open source email ↗</a>`:""}`:""}
+   </form>
+   <div class="drawer-f">${!isNew&&canWrite?`<button class="btn ghost" type="button" id="queuePoc">Find POC</button>`:""}<button class="btn" data-close type="button">Cancel</button><button class="btn primary" type="submit" form="appForm" ${ro}>${isNew?"Add":"Save"}</button></div>
+  </aside>`;
+  const close=()=>{$("drawerRoot").innerHTML=""};
+  $("drawerRoot").querySelectorAll("[data-close]").forEach(b=>b.onclick=close);
+  document.addEventListener("keydown",function k(e){if(e.key==="Escape"){close();document.removeEventListener("keydown",k)}});
+  $("ackFlag")&&($("ackFlag").onclick=()=>{patchApp(a.id,{flagged:false},"Marked as reviewed");close()});
+  $("queuePoc")&&($("queuePoc").onclick=()=>{queuePoc("app:"+a.id);close()});
+  $("addOut")&&($("addOut").onclick=async()=>{const who=$("o-who").value.trim();if(!who){$("o-who").focus();return}
+    const entry={date:todayStr(),who,channel:$("o-ch").value,note:$("o-note").value.trim(),replied:$("o-rep").checked};
+    await patchApp(a.id,{outreach:[...(a.outreach||[]),entry],lastActivity:todayStr()},"Outreach logged");setTimeout(()=>openDrawer(a.id),300)});
+  $("addRound")&&($("addRound").onclick=async()=>{const title=$("r-title").value.trim(),s=$("r-start").value;if(!title){$("r-title").focus();return}
+    const start=s?s+":00+05:30":"";const r={id:"r-"+Date.now().toString(36),title,start,end:start?new Date(new Date(start).getTime()+36e5).toISOString():"",mode:$("r-mode").value.trim(),with:$("r-with").value.trim(),joinUrl:$("r-join").value.trim(),prep:$("r-prep").value.trim(),status:start?"scheduled":"awaiting",sourceNote:"Added on dashboard",addedBy:"dashboard"};
+    await patchApp(a.id,{rounds:[...(a.rounds||[]),r],lastActivity:todayStr(),updatedBy:"dashboard"},"Round added");setTimeout(()=>openDrawer(a.id),300)});
+  $("appForm").onsubmit=async e=>{e.preventDefault();if(!canWrite)return;
+    const v=id=>$(id).value.trim();const status=$("f-status").value;
+    const data={company:v("f-company"),role:v("f-role"),status,dateApplied:v("f-date"),platform:v("f-platform"),cv:$("f-cv").value,
+      poc:{...(a.poc||{}),name:v("f-pocname"),contact:v("f-poccontact")},referral:v("f-ref"),link:v("f-link"),nextStep:v("f-next"),nextDue:v("f-due"),notes:v("f-notes"),updatedAt:new Date().toISOString(),updatedBy:"dashboard"};
+    if(!data.company||!data.role)return;
+    if(!db){toast("Can't save: the database isn't connected in this view");return}
+    try{
+      if(isNew){const id=(data.company+"-"+data.role).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)+"-"+Math.random().toString(36).slice(2,6);
+        await db.doc("apps/"+id).set({...a,...data,id,source:"manual",lastActivity:todayStr(),flagged:false,history:[{date:todayStr(),status,note:"Added on dashboard"}],outreach:[],createdAt:new Date().toISOString()});toast(`Added ${data.company}`)}
+      else{if(status!==a.status){data.history=[...(a.history||[]),{date:todayStr(),status,note:"Changed on dashboard"}];data.lastActivity=todayStr();data.flagged=false}
+        await db.doc("apps/"+a.id).update(data);toast("Saved")}
+      close()}catch(err){handleWriteErr(err)}};
+}
+
+async function queuePoc(target){
+  if(!db||!canWrite){toast("Can't queue: view-only");return}
+  const [kind,id]=target.split(":");let label="";
+  if(kind==="app"){const a=state.apps.find(x=>x.id===id);label=a?`${a.company} · ${a.role}`:id}else{const j=state.jobs.find(x=>x.id===id);label=j?`${j.company} · ${j.title}`:id}
+  if(state.poc.some(p=>p.target===target&&p.status==="queued")){toast("Already queued");return}
+  const pid="poc-"+Date.now().toString(36);
+  try{await db.doc("poc/"+pid).set({id:pid,target,label,status:"queued",requestedAt:new Date().toISOString(),results:[]});toast("POC search queued for the next sync")}catch(e){handleWriteErr(e)}
+}
+
+/* ---------- events ---------- */
+document.querySelector("nav.tabs").onclick=e=>{const b=e.target.closest("button[data-tab]");if(!b)return;state.tab=b.dataset.tab;try{localStorage.setItem("sb.tab",state.tab)}catch(_){};render()};
+$("q").oninput=e=>{state.q=e.target.value;renderRows()};
+$("stageChips").onclick=e=>{const b=e.target.closest("[data-stage]");if(!b)return;state.stage=b.dataset.stage;renderStageChips();renderRows()};
+document.querySelector("#view-pipeline thead").onclick=e=>{const th=e.target.closest("th[data-sort]");if(!th)return;const k=th.dataset.sort;state.sort=state.sort.k===k?{k,dir:-state.sort.dir}:{k,dir:k==="age"||k==="dateApplied"?-1:1};renderRows()};
+$("rows").onclick=e=>{const tr=e.target.closest("tr[data-id]");if(tr)openDrawer(tr.dataset.id)};
+$("rows").onchange=e=>{const s=e.target.closest("select[data-field]");if(!s)return;
+  if(s.dataset.field==="status")setStatus(s.dataset.id,s.value);else patchApp(s.dataset.id,{cv:s.value,updatedAt:new Date().toISOString()},"CV saved")};
+const addDays=(d,n)=>{const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);return new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+async function quickAction(id,k){
+  const a=state.apps.find(x=>x.id===id);if(!a)return;const t=todayStr(),h=a.history||[],o=a.outreach||[];
+  const who=a.poc?.name||a.referral||"Hiring team";
+  const P={
+    done:[{nextStep:"",nextDue:"",lastActivity:t,history:[...h,{date:t,status:a.status,note:"Done: "+a.nextStep}]},`Done: ${a.company}`],
+    snooze2:[{nextDue:addDays(a.nextDue||t,2)},`${a.company} moved 2 days`],
+    refsent:[{nextStep:"",nextDue:"",lastActivity:t,outreach:[...o,{date:t,who,channel:"Referral ask",note:a.nextStep||"Sent details",replied:true}],history:[...h,{date:t,status:a.status,note:"Done: "+(a.nextStep||"referral details sent")}]},`Logged for ${a.company}. Waiting on the referral`],
+    referred:[{status:"Applied",platform:"Referral",nextStep:"",nextDue:"",dateApplied:a.dateApplied||t,lastActivity:t,history:[...h,{date:t,status:"Applied",note:"Referred by "+who}]},`${a.company} → Applied via referral`],
+    followed:[{lastActivity:t,snoozeUntil:"",outreach:[...o,{date:t,who,channel:a.poc?.contact?.includes("@")?"Email":"LinkedIn DM",note:"Follow-up sent",replied:false}]},`Follow-up logged for ${a.company}. Next nudge in 7 days`],
+    snooze3:[{snoozeUntil:addDays(t,3)},`${a.company} snoozed 3 days`],
+    ghosted:[{status:"Ghosted",lastActivity:t,history:[...h,{date:t,status:"Ghosted",note:"No reply after "+idle(a)+" days"}]},`${a.company} → Ghosted`],
+    ack:[{flagged:false},"Marked as reviewed"],
+    undo:[(()=>{const prev=h.length>1?h[h.length-2].status:"Applied";return{status:prev,flagged:false,history:[...h,{date:t,status:prev,note:"Sync change undone on dashboard"}]}})(),`${a.company} change undone`]
+  }[k];
+  if(P)await patchApp(id,{...P[0],updatedAt:new Date().toISOString(),updatedBy:"dashboard"},P[1]);
+}
+$("actions").onclick=e=>{const b=e.target.closest("[data-qa]");if(b){e.stopPropagation();b.disabled=true;quickAction(b.dataset.id,b.dataset.qa);return}const li=e.target.closest("li[data-id]");if(li)openDrawer(li.dataset.id)};
+$("outList").onclick=async e=>{const b=e.target.closest("[data-rep]");if(b){e.stopPropagation();const a=state.apps.find(x=>x.id===b.dataset.id);if(!a)return;const o=(a.outreach||[]).map((x,i)=>i===+b.dataset.rep?{...x,replied:true}:x);await patchApp(a.id,{outreach:o,lastActivity:todayStr()},"Marked as replied");return}const li=e.target.closest("li[data-id]");if(li)openDrawer(li.dataset.id)};
+$("addBtn").onclick=()=>openDrawer(null,true);
+$("ageChips").onclick=e=>{const b=e.target.closest("[data-age]");if(!b)return;state.jobAge=b.dataset.age;renderJobs()};
+$("fitToggle").onclick=()=>{state.fitOnly=!state.fitOnly;renderJobs()};
+$("wlToggle").onclick=()=>{state.wlOnly=!state.wlOnly;renderJobs()};
+$("dismissedToggle").onclick=()=>{state.showDismissed=!state.showDismissed;renderJobs()};
+$("jobs").onclick=async e=>{const b=e.target.closest("[data-jact]");if(!b)return;const jid=b.closest("[data-jid]").dataset.jid;const j=state.jobs.find(x=>x.id===jid);if(!j||!db)return;
+  const act=b.dataset.jact;
+  try{if(act==="dismiss"||act==="restore"){await db.doc("jobs/"+jid).update({status:act==="dismiss"?"dismissed":"new"})}
+  else if(act==="poc"){queuePoc("job:"+jid)}
+  else if(act==="track"){openDrawer(null,true,{company:j.company,role:j.title,link:j.url||"",status:"Wishlist",dateApplied:"",platform:/linkedin/i.test(j.source||"")?"LinkedIn":"",jobId:j.id,poc:j.recruiter?{name:j.recruiter,source:"Named on posting",confidence:"Likely"}:{}})}}catch(err){handleWriteErr(err)}};
+$("wlForm").onsubmit=async e=>{e.preventDefault();const n=$("wlInput").value.trim();if(!n||!db)return;const id=n.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+  try{await db.doc("watchlist/"+id).set({id,name:n,addedAt:new Date().toISOString(),tier:"A"});$("wlInput").value="";toast(`Watching ${n}`)}catch(err){handleWriteErr(err)}};
+$("wl").onclick=async e=>{const b=e.target.closest("[data-wl-del]");if(!b||!db)return;try{await db.doc("watchlist/"+b.dataset.wlDel).delete()}catch(err){handleWriteErr(err)}};
+$("pocForm").onsubmit=e=>{e.preventDefault();const v=$("pocTarget").value;if(v)queuePoc(v)};
+$("pocList").onclick=async e=>{const b=e.target.closest("[data-copy]");if(!b)return;const p=state.poc.find(x=>x.id===b.dataset.copy);if(!p)return;
+  try{await navigator.clipboard.writeText(p.draft);toast("Copied")}catch(_){const r=document.createRange();r.selectNodeContents(b.previousElementSibling);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selected. Press Ctrl+C to copy")}};
+
+const goTab=t=>{state.tab=t;try{localStorage.setItem("sb.tab",t)}catch(_){};render();window.scrollTo(0,0)};
+$("nextUp").onclick=e=>{const b=e.target.closest("[data-goto]");if(b)goTab(b.dataset.goto)};
+$("intChips").onclick=e=>{const b=e.target.closest("[data-if]");if(!b)return;state.intFilter=b.dataset.if;renderInterviews()};
+$("roundList").onclick=e=>{const b=e.target.closest("[data-rd]");if(!b)return;const c=b.closest("[data-aid]");b.disabled=true;roundAction(c.dataset.aid,+c.dataset.ri,b.dataset.rd).finally(()=>{b.disabled=false})};
+$("aqChips").onclick=e=>{const b=e.target.closest("[data-aq]");if(!b)return;state.aqFilter=b.dataset.aq;renderApply()};
+$("aqList").onclick=e=>{const b=e.target.closest("[data-qa2]");if(!b)return;b.disabled=true;queueAction(b.closest("[data-qid]").dataset.qid,b.dataset.qa2)};
+$("profBox").onclick=e=>{if(e.target.closest("#editProf"))openProfile()};
+$("ruleForm").onsubmit=async e=>{e.preventDefault();const ref=profRef();if(!ref||!canWrite)return;const p=state.profile||{};
+  const aa={enabled:!!(p.vetted&&$("aa-on").checked),fitBar:Math.min(100,Math.max(50,+$("aa-fit").value||75)),dailyCap:Math.min(20,Math.max(1,+$("aa-cap").value||5)),platforms:[...document.querySelectorAll("#ruleForm [data-plat]:checked")].map(x=>x.dataset.plat),exclude:$("aa-ex").value.trim()};
+  try{await ref.set({...p,autoApply:aa,updatedAt:new Date().toISOString()});toast(aa.enabled?`Auto-submit on for fit ${aa.fitBar}+`:"Rules saved. Auto-submit is off")}catch(err){handleWriteErr(err)}};
+setInterval(()=>{if(state.tab==="pipeline")renderNextUp();if(state.tab==="interviews")renderInterviews()},60000);
+
+render();
+
+/* ---------- connect: standalone demo ----------
+   The live Switch Board reads a private database that a scheduled sync fills
+   from Gmail. This public copy swaps in a small in-browser store with sample
+   data, so every button works and nothing leaves the visitor's browser. */
+(async()=>{
+  const KEY="sb-demo-v1";
+  const iso=(d,h=10,m=0)=>{const x=new Date();x.setDate(x.getDate()+d);x.setHours(h,m,0,0);return x.toISOString()};
+  const day=d=>{const x=new Date();x.setDate(x.getDate()+d);return new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+  const app=(id,company,role,status,applied,o={})=>({id,company,role,status,dateApplied:applied==null?"":day(applied),lastActivity:day(o.last??applied??0),platform:o.platform||"Company portal",cv:o.cv||"PM Core",poc:o.poc||{},referral:o.referral||"",link:"",nextStep:o.nextStep||"",nextDue:o.nextDue!=null?day(o.nextDue):"",notes:o.notes||"",history:[{date:day(applied??0),status,note:"Sample entry"}],outreach:o.outreach||[],rounds:o.rounds||[],flagged:!!o.flagged,flagNote:o.flagNote||"",source:"demo"});
+  const seed=()=>({
+    "apps/northwind":app("northwind","Northwind Pay","Product Manager, Merchant Growth","Interviewing",-12,{platform:"Referral",referral:"A. Mehta",cv:"PM Core",last:-1,rounds:[{id:"r1",title:"Round 2 · Hiring manager",start:iso(2,11),end:iso(2,12),mode:"Google Meet",with:"Hiring manager, Merchant team",prep:"Bring one metric you moved and how you would size the merchant opportunity.",status:"scheduled",sourceNote:"From the invite email"}]}),
+    "apps/lumen":app("lumen","Lumen Health","Product Manager, Doctor Experience","Screening",-9,{platform:"Ashby",cv:"PM Core",last:-3,rounds:[{id:"r2",title:"Recruiter screen",start:iso(4,15,30),end:iso(4,16),mode:"Phone",with:"Talent partner",status:"scheduled",sourceNote:"From the invite email"}]}),
+    "apps/kite":app("kite","Kite Labs","AI Product Manager","Assessment",-6,{platform:"Greenhouse",cv:"AI PM",last:-2,nextStep:"Submit take-home case",nextDue:1}),
+    "apps/orbit":app("orbit","Orbit Commerce","Product Manager II","Applied",-10,{platform:"LinkedIn Easy Apply",cv:"PM Core",poc:{name:"Recruiter, Orbit",contact:"linkedin.com/in/example"}}),
+    "apps/fern":app("fern","Fern Learning","Product Manager, Consumer","Applied",-23,{platform:"Lever",cv:"PM Core"}),
+    "apps/quill":app("quill","Quill Docs","Associate Product Manager","Applied",-3,{platform:"Workable",cv:"AI PM"}),
+    "apps/harbor":app("harbor","Harbor Freight Tech","Platform PM","Referral asked",null,{nextStep:"Send CV and referral details",nextDue:0,referral:"Friend at Harbor"}),
+    "apps/pebble":app("pebble","Pebble Games","Product Manager, Economy","Rejected",-30,{platform:"Company portal",cv:"PM Core",last:-14}),
+    "apps/atlas":app("atlas","Atlas Travel","Product Manager, Hotels","Interviewing",-15,{platform:"Referral",referral:"Ex-colleague",cv:"PM Core",last:-2,flagged:true,flagNote:"Sync moved this to Interviewing from a scheduling email",rounds:[{id:"r3",title:"Round 1 · Product sense",start:iso(-2,14),end:iso(-2,15),mode:"MS Teams",with:"Senior PM",status:"done",outcome:"Cleared to next round"}]}),
+    "apps/cinder":app("cinder","Cinder Analytics","Product Manager","Ghosted",-35,{platform:"Job board",cv:"AI PM",last:-34}),
+    "jobs/j1":{id:"j1",company:"Vela Money",title:"Product Manager, Payments",location:"Bengaluru",source:"Greenhouse",postedAt:iso(0,7),fit:82,fitWhy:"Product company, consumer payments, Bengaluru",url:"",status:"new"},
+    "jobs/j2":{id:"j2",company:"Quill Docs",title:"Product Manager, AI Search",location:"Remote, India",source:"Ashby",postedAt:iso(0,5),fit:78,fitWhy:"AI-core B2B SaaS, remote India",url:"",status:"new",watchlist:true},
+    "jobs/j3":{id:"j3",company:"Brightline",title:"Senior Product Manager",location:"Gurugram",source:"LinkedIn alert",postedAt:iso(-1,9),fit:61,fitWhy:"Platform role; asks 6+ years",url:"",status:"new"},
+    "jobs/j4":{id:"j4",company:"Meridian Consulting",title:"Forward Deployed PM",location:"Mumbai",source:"hirist",postedAt:iso(0,3),fit:28,fitWhy:"Consulting-style and forward-deployed: scored down",url:"",status:"new",excluded:true},
+    "jobs/j5":{id:"j5",company:"Tinker",title:"Product Manager, Creator Tools",location:"Bengaluru",source:"Lever",postedAt:iso(-2,12),fit:74,fitWhy:"Consumer product company",url:"",status:"new"},
+    "watchlist/quill-docs":{id:"quill-docs",name:"Quill Docs",tier:"A"},
+    "watchlist/vela-money":{id:"vela-money",name:"Vela Money",tier:"A"},
+    "poc/p1":{id:"p1",target:"app:orbit",label:"Orbit Commerce · Product Manager II",status:"done",requestedAt:iso(-4),results:[{name:"Group PM, Checkout",title:"Named on the team page",confidence:"Likely",why:"Leads the team this role sits in"}],draft:"Hi, I applied for the PM II role on your team last week. I have shipped a self-serve tool that cut a support lookup from hours to minutes and would love ten minutes to learn what the team is solving next."},
+    "applyq/q1":{id:"q1",company:"Vela Money",title:"Product Manager, Payments",ats:"Greenhouse",location:"Bengaluru",fit:82,cv:"PM Core",status:"review",reason:"Has two written questions",answers:[{q:"Why Vela?",a:"Draft answer goes here for review."},{q:"Tell us about a product you shipped end to end.",a:"Draft answer goes here for review."}]},
+    "applyq/q2":{id:"q2",company:"Tinker",title:"Product Manager, Creator Tools",ats:"Lever",fit:74,cv:"PM Core",status:"drafted",reason:"No written questions; goes out at the next sync"},
+    "meta/sync":{lastRun:iso(0,new Date().getHours()-2),summary:"Sample data",nextRun:iso(0,new Date().getHours()+4)}
+  });
+  let store;
+  try{store=JSON.parse(localStorage.getItem(KEY)||"null")}catch(_){store=null}
+  if(!store)store=seed();
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(store))}catch(_){}};
+  const subs=new Set();
+  const emit=()=>{save();subs.forEach(f=>f())};
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  const docRef=path=>({
+    async set(v){store[path]=clone(v);emit()},
+    async update(p){store[path]={...(store[path]||{}),...clone(p)};emit()},
+    async delete(){delete store[path];emit()},
+    onSnapshot(cb){const f=()=>cb({exists:path in store,data:()=>clone(store[path])});subs.add(f);f();return()=>subs.delete(f)}
+  });
+  const colDocs=col=>Object.keys(store).filter(k=>k.startsWith(col+"/")&&!k.slice(col.length+1).includes("/")).map(k=>({id:k.slice(col.length+1),data:()=>clone(store[k])}));
+  db={
+    doc:docRef,
+    collection:col=>({doc:id=>docRef(col+"/"+id),onSnapshot(cb){const f=()=>cb({docs:colDocs(col)});subs.add(f);f();return()=>subs.delete(f)}})
+  };
+  state.uid="demo";
+  $("banner").innerHTML=`<div class="banner">Demo with sample data. The real board fills itself from Gmail three times a day; this copy keeps your changes in your browser only. <button class="btn sm" type="button" id="resetDemo" style="margin-left:8px">Reset sample data</button></div>`;
+  document.getElementById("resetDemo").onclick=()=>{store=seed();emit();toast("Sample data reset")};
+  const sub=(path,key)=>db.collection(path).onSnapshot(s=>{state[key]=s.docs.map(d=>({id:d.id,...d.data()}));render()});
+  sub("apps","apps");sub("jobs","jobs");sub("watchlist","watch");sub("poc","poc");sub("applyq","applyq");
+  profRef().onSnapshot(s=>{state.profile=s.exists?s.data():null;state.profileLoaded=true;renderApply()});
+  db.doc("meta/sync").onSnapshot(s=>{state.meta=s.exists?s.data():null;renderSync()});
+})();
+})();
+</script>
+<p style="text-align:center;font:12px var(--f-body,sans-serif);color:var(--muted,#5B6B65);padding:0 16px 32px">Built by <a href="/">Shouvik Sarkar</a> · <a href="/#projects">More projects</a></p>
+</body></html>
